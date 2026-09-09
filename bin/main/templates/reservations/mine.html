@@ -1,6 +1,0 @@
-<!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>내 예약 | Gate</title><link rel="stylesheet" th:href="@{/css/style.css}"></head>
-<body><main class="container narrow"><nav class="nav"><a href="/slots">Gate</a><a href="/slots">슬롯 보기</a><form method="post" action="/logout"><button class="link-button" type="submit">로그아웃</button></form></nav><p class="eyebrow">MY RESERVATIONS</p><h1>내 예약</h1><p class="status" th:if="${message}" th:text="${message}"></p><section class="card" th:if="${#lists.isEmpty(reservations)}"><p>아직 예약이 없습니다.</p></section><section class="card" th:each="reservation : ${reservations}"><h2 th:text="${reservation.slot.name}">10시 입장</h2><p th:text="|상태: ${reservation.status}|">상태: HELD</p><p th:text="${reservation.createdAt}">2026-09-09T10:00</p><p th:if="${reservation.seat != null}">좌석: <b th:text="${reservation.seat.label}">1-A</b></p><form th:if="${reservation.status.name() == 'HELD'}" method="post" action="/reservations/cancel" onsubmit="return confirm('정말 이 예약을 취소하시겠습니까?');"><input type="hidden" name="reservationId" th:value="${reservation.id}"><button type="submit" class="cancel-button">예약 취소</button></form></section></main></body></html>
-
-
