@@ -28,12 +28,22 @@ public class ReservationService {
         if (attempts != null && attempts > 10) throw new IllegalStateException("요청이 너무 많습니다. 잠시 후 다시 시도해주세요.");
         String key = "gate:lock:slot:" + slotId;
         Boolean acquired = redis.opsForValue().setIfAbsent(key, String.valueOf(userId), Duration.ofSeconds(10));
-        if (!Boolean.TRUE.equals(acquired)) throw new IllegalStateException("접속자가 많습니다. 잠시 후 다시 시도해주세요.");
+        if (!Boolean.TRUE.equals(acquired)) {
+            redis.opsForList().rightPush("gate:queue:slot:" + slotId, String.valueOf(userId));
+            throw new IllegalStateException("접속자가 많아 대기열에 등록되었습니다. 잠시 후 다시 시도해주세요.");
+        }
         try {
             Seat seat = seats.findWithLockById(seatId).orElseThrow();
             if (!seat.getSlot().getId().equals(slotId) || seat.isReserved()) throw new IllegalStateException("이미 예약된 좌석입니다.");
             Reservation r = reserve(slotId, userId); seat.reserve(); r.assignSeat(seat); return r;
         } finally { redis.delete(key); }
+    }
+
+    public Long queuePosition(Long slotId, Long userId) {
+        java.util.List<String> queue = redis.opsForList().range("gate:queue:slot:" + slotId, 0, -1);
+        if (queue == null) return null;
+        int index = queue.indexOf(String.valueOf(userId));
+        return index < 0 ? null : (long) index + 1;
     }
 
     @Transactional
