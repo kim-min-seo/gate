@@ -1,0 +1,8 @@
+:root { font-family: Arial, sans-serif; color: #172033; background: #f5f7fb; }
+body { margin: 0; }
+.container { max-width: 720px; margin: 0 auto; padding: 96px 24px; }
+.eyebrow { color: #4867d8; font-size: 13px; font-weight: 700; letter-spacing: .12em; }
+h1 { margin: 12px 0 20px; font-size: 40px; }
+.status { color: #16824b; font-weight: 700; }
+.card { margin-top: 40px; padding: 28px; border: 1px solid #e1e6f0; border-radius: 16px; background: white; box-shadow: 0 8px 24px #243b5312; }
+.card h2 { margin-top: 0; }
