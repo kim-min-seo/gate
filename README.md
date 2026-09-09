@@ -32,3 +32,7 @@ docker compose up -d postgres redis
 .\gradlew.bat bootRun
 ```
 브라우저에서 `http://localhost:8080/slots`를 엽니다.
+
+## Redis 보호 기능
+- 시간대별 Redis 분산 락(10초 TTL)으로 다중 서버 중복 처리 방지
+- 사용자별 10초당 예약 요청 10회 제한으로 폭주 완화
