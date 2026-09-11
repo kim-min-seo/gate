@@ -39,6 +39,18 @@ public class ReservationService {
         } finally { redis.delete(key); }
     }
 
+    @Transactional
+    public Reservation autoReserve(Long slotId, Long userId) {
+        var available = seats.findAllBySlotOrderByLabelAsc(slots.findById(slotId).orElseThrow())
+                .stream().filter(s -> !s.isReserved()).collect(java.util.stream.Collectors.toList());
+        java.util.Collections.shuffle(available);
+        for (Seat seat : available) {
+            try { return reserveSeat(slotId, seat.getId(), userId); }
+            catch (IllegalStateException ignored) { }
+        }
+        throw new IllegalStateException("남은 좌석이 없습니다.");
+    }
+
     public Long queuePosition(Long slotId, Long userId) {
         java.util.List<String> queue = redis.opsForList().range("gate:queue:slot:" + slotId, 0, -1);
         if (queue == null) return null;

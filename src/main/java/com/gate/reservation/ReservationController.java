@@ -24,4 +24,13 @@ public class ReservationController {
         }
         return "redirect:/slots";
     }
+
+    @PostMapping("/reservations/auto")
+    public String auto(@RequestParam Long slotId, jakarta.servlet.http.HttpSession session, RedirectAttributes attributes) {
+        Long userId = (Long) session.getAttribute("userId");
+        if (userId == null) return "redirect:/login";
+        try { service.autoReserve(slotId, userId); attributes.addFlashAttribute("message", "좌석이 자동 배정되었습니다."); }
+        catch (IllegalStateException e) { attributes.addFlashAttribute("message", e.getMessage()); }
+        return "redirect:/slots";
+    }
 }
