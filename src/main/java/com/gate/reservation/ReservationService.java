@@ -61,8 +61,8 @@ public class ReservationService {
     @Transactional
     public Reservation reserve(Long slotId, Long userId) {
         Slot slot = slots.findByIdForUpdate(slotId).orElseThrow();
-        if (reservations.existsBySlotIdAndUserIdAndStatus(slotId, userId, ReservationStatus.HELD))
-            throw new IllegalStateException("이미 신청한 시간대입니다.");
+        long mine = reservations.countBySlotIdAndUserIdAndStatusIn(slotId, userId, java.util.List.of(ReservationStatus.HELD, ReservationStatus.CONFIRMED));
+        if (mine >= 4) throw new IllegalStateException("한 시간대에 최대 4매까지 예약할 수 있습니다.");
         if (slot.getRemaining() <= 0) throw new IllegalStateException("품절된 슬롯입니다.");
         slot.decreaseRemaining();
         Reservation reservation = new Reservation(userId, slot);
