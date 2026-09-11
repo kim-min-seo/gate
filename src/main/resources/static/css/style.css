@@ -1,6 +1,6 @@
 :root { font-family: Arial, sans-serif; color: #172033; background: #f5f7fb; }
 body { margin: 0; }
-.container { max-width: 720px; margin: 0 auto; padding: 64px 24px; }
+.container { max-width: 720px; margin: 0 auto; padding: 28px 24px 64px; }
 .narrow { max-width: 480px; }
 .nav { display:flex; gap:18px; align-items:center; margin-bottom:48px; }
 .nav a:first-child { margin-right:auto; font-weight:800; color:#172033; }
@@ -43,4 +43,4 @@ h1 { margin: 12px 0 20px; font-size: 40px; }
 @media(max-width:700px){.container{padding:32px 18px}.hero-copy h1{font-size:44px}.hero-stats{gap:22px}.slot-grid{grid-template-columns:1fr}}
 .date-picker { margin:24px 0; } .date-picker label { display:flex; align-items:center; flex-direction:row; gap:14px; color:#69738a; } .date-picker select { padding:12px 42px 12px 14px; border:1px solid #d7ddea; border-radius:10px; background:#fff; font-size:16px; color:#172033; }
 .seat-choice { display:block; cursor:pointer; } .seat-choice input { display:none; } .seat-choice .seat { display:block; box-sizing:border-box; } .seat-choice:has(input:checked) .seat { background:#4867d8; color:#fff; transform:translateY(-2px); box-shadow:0 4px 10px #4867d855; } .seat-choice:has(input:disabled) { cursor:not-allowed; }
-.auto-form { text-align:center; margin:18px 0 24px; }
+.auto-form { display:flex; align-items:center; justify-content:flex-start; gap:12px; margin:14px 0 22px; } .auto-form label { flex-direction:row; align-items:center; gap:8px; font-size:13px; } .auto-form select { padding:8px 28px 8px 10px; border:1px solid #d7ddea; border-radius:8px; }
