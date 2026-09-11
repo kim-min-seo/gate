@@ -26,6 +26,13 @@ public class ReservationController {
         return "redirect:/slots";
     }
 
+    @PostMapping("/payment")
+    public String payment(@RequestParam Long slotId, @RequestParam java.util.List<Long> seatIds, jakarta.servlet.http.HttpSession session, org.springframework.ui.Model model) {
+        Long userId = (Long) session.getAttribute("userId"); if (userId == null) return "redirect:/login";
+        if (seatIds.size() < 1 || seatIds.size() > 4) return "redirect:/slots/" + slotId + "/seats";
+        model.addAttribute("slot", service.getSlot(slotId)); model.addAttribute("seatIds", seatIds); return "payment/checkout";
+    }
+
     @PostMapping("/reservations/auto")
     public String auto(@RequestParam Long slotId, jakarta.servlet.http.HttpSession session, RedirectAttributes attributes) {
         Long userId = (Long) session.getAttribute("userId");

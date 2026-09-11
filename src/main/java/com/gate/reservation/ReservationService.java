@@ -19,6 +19,7 @@ public class ReservationService {
     public ReservationService(ReservationRepository reservations, SlotRepository slots, SeatRepository seats, StringRedisTemplate redis) {
         this.reservations = reservations; this.slots = slots; this.seats = seats; this.redis = redis;
     }
+    public Slot getSlot(Long id) { return slots.findById(id).orElseThrow(); }
 
     @Transactional
     public Reservation reserveSeat(Long slotId, Long seatId, Long userId) {
@@ -49,6 +50,14 @@ public class ReservationService {
             catch (IllegalStateException ignored) { }
         }
         throw new IllegalStateException("남은 좌석이 없습니다.");
+    }
+
+    @Transactional
+    public java.util.List<Reservation> reserveSeats(Long slotId, java.util.List<Long> seatIds, Long userId) {
+        if (seatIds == null || seatIds.isEmpty() || seatIds.size() > 4) throw new IllegalStateException("좌석은 1~4개까지 선택할 수 있습니다.");
+        java.util.List<Reservation> result = new java.util.ArrayList<>();
+        for (Long seatId : seatIds) result.add(reserveSeat(slotId, seatId, userId));
+        result.forEach(Reservation::confirm); return result;
     }
 
     public Long queuePosition(Long slotId, Long userId) {

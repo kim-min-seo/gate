@@ -18,10 +18,4 @@ public class SeatController {
         model.addAttribute("slot", slot); model.addAttribute("seats", seats.findAllBySlotOrderByLabelAsc(slot));
         return "seats/list";
     }
-    @PostMapping("/payment")
-    public String payment(@RequestParam Long slotId, @RequestParam Long seatId, Model model) {
-        var slot = slots.findById(slotId).orElseThrow(); var seat = seats.findById(seatId).orElseThrow();
-        if (seat.isReserved()) return "redirect:/slots/" + slotId + "/seats";
-        model.addAttribute("slot", slot); model.addAttribute("seat", seat); return "payment/checkout";
-    }
 }
