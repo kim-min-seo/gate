@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import jakarta.persistence.LockModeType;
 
 public interface SlotRepository extends JpaRepository<Slot, Long> {
+    boolean existsByStartsAt(java.time.LocalDateTime startsAt);
     java.util.List<Slot> findAllByOrderByStartsAtAsc();
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

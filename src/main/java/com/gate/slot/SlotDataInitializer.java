@@ -27,6 +27,15 @@ public class SlotDataInitializer {
                     if (!seatRepository.existsBySlotAndLabel(slot, label)) seatRepository.save(new Seat(label, slot));
                 }
             }
+            LocalDateTime base = LocalDateTime.now().withHour(9).withMinute(0).withSecond(0).withNano(0);
+            int[] hours = {9,10,11,12,13,14,15,16,17,18};
+            for (int day = 0; day < 30; day++) for (int hour : hours) {
+                LocalDateTime starts = base.plusDays(day).withHour(hour);
+                if (!repository.existsByStartsAt(starts)) {
+                    Slot slot = repository.save(new Slot(hour + "시 입장", 100, starts));
+                    for (int row = 1; row <= 10; row++) for (char col = 'A'; col <= 'J'; col++) seatRepository.save(new Seat(row + "-" + col, slot));
+                }
+            }
         };
     }
 }

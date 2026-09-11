@@ -32,4 +32,13 @@ h1 { margin: 12px 0 20px; font-size: 40px; }
 .payment-options label { display:flex !important; flex-direction:row !important; align-items:center; justify-content:flex-start; gap:10px; margin:0 !important; width:100%; }
 .payment-options label input[type=radio] { appearance:auto; flex:none; width:18px !important; height:18px; margin:0; padding:0; }
 .payment-options label span { display:block; line-height:18px; }
+.brand { font-size:24px; letter-spacing:-.06em; } .brand span { color:#4867d8; }
+.nav-spacer { flex:1; } .user-chip { background:#eef1ff; padding:8px 12px; border-radius:999px; font-size:12px; }
+.hero { min-height:calc(100vh - 128px); background:radial-gradient(circle at 85% 20%,#dce5ff,transparent 35%),linear-gradient(135deg,#fff 0%,#f1f4ff 100%); border-radius:28px; }
+.hero-copy { padding:90px 0 70px; } .hero-copy h1 { font-size:64px; line-height:1.08; letter-spacing:-.06em; margin:18px 0; } .hero-copy h1 em { color:#4867d8; font-style:normal; }
+.hero-copy p:not(.eyebrow) { color:#69738a; font-size:18px; } .hero-button { display:inline-block; margin-top:24px; padding:16px 22px; border-radius:12px; background:#172033; color:#fff; text-decoration:none; font-weight:700; }
+.hero-stats { display:flex; gap:64px; border-top:1px solid #dfe4ef; padding-top:28px; } .hero-stats div { display:flex; flex-direction:column; gap:5px; } .hero-stats b { font-size:28px; } .hero-stats span { color:#8991a3; font-size:11px; letter-spacing:.1em; }
+.page-heading { margin:40px 0 28px; } .page-heading h1 { margin-bottom:8px; } .page-heading p:not(.eyebrow) { color:#69738a; }
+.slot-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; } .slot-card { padding:24px; border:1px solid #e1e6f0; border-radius:18px; background:#fff; box-shadow:0 10px 30px #243b530b; } .slot-top { display:flex; gap:8px; align-items:center; color:#16824b; font-size:11px; font-weight:700; letter-spacing:.08em; } .slot-dot { width:8px; height:8px; border-radius:50%; background:#27b36a; } .slot-card h2 { font-size:28px; margin:28px 0 4px; } .slot-date { color:#8991a3; font-size:13px; } .capacity { display:flex; justify-content:space-between; margin:24px 0; padding-top:16px; border-top:1px solid #edf0f6; color:#69738a; } .capacity b { color:#172033; }
+@media(max-width:700px){.container{padding:32px 18px}.hero-copy h1{font-size:44px}.hero-stats{gap:22px}.slot-grid{grid-template-columns:1fr}}
 .auto-form { text-align:center; margin:18px 0 24px; }
