@@ -79,7 +79,7 @@ public class ReservationService {
     public void cancel(Long reservationId, Long userId) {
         Reservation reservation = reservations.findByIdAndUserId(reservationId, userId)
                 .orElseThrow(() -> new IllegalArgumentException("예약을 찾을 수 없습니다."));
-        if (reservation.getStatus() != ReservationStatus.HELD)
+        if (reservation.getStatus() != ReservationStatus.HELD && reservation.getStatus() != ReservationStatus.CONFIRMED)
             throw new IllegalStateException("취소할 수 없는 예약 상태입니다.");
         reservation.cancel();
         if (reservation.getSeat() != null) reservation.getSeat().release();

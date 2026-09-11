@@ -35,4 +35,5 @@ public class Reservation {
     public ReservationStatus getStatus() { return status; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void cancel() { this.status = ReservationStatus.CANCELLED; }
+    public void confirm() { this.status = ReservationStatus.CONFIRMED; }
 }

@@ -19,6 +19,9 @@ public class AuthController {
     @PostMapping("/signup")
     public String signup(@RequestParam String email, @RequestParam String password,
                          HttpSession session, RedirectAttributes attributes) {
+        if (!email.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$") || password.length() < 8) {
+            attributes.addFlashAttribute("error", "올바른 이메일과 8자 이상 비밀번호를 입력하세요."); return "redirect:/signup";
+        }
         if (users.existsByEmail(email)) {
             attributes.addFlashAttribute("error", "이미 가입된 이메일입니다.");
             return "redirect:/signup";

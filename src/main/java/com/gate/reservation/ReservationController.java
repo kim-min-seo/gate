@@ -17,7 +17,8 @@ public class ReservationController {
         Long userId = (Long) session.getAttribute("userId");
         if (userId == null) { attributes.addFlashAttribute("message", "로그인 후 예약할 수 있습니다."); return "redirect:/login"; }
         try {
-            if (seatId == null) service.reserve(slotId, userId); else service.reserveSeat(slotId, seatId, userId);
+            Reservation reservation = seatId == null ? service.reserve(slotId, userId) : service.reserveSeat(slotId, seatId, userId);
+            reservation.confirm();
             attributes.addFlashAttribute("message", "예약이 접수되었습니다.");
         } catch (IllegalStateException e) {
             attributes.addFlashAttribute("message", e.getMessage());
