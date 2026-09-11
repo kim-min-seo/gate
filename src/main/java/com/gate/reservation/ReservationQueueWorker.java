@@ -9,10 +9,12 @@ public class ReservationQueueWorker {
     private final StringRedisTemplate redis;
     private final com.gate.slot.SlotRepository slots;
     private final ReservationService reservations;
-    public ReservationQueueWorker(StringRedisTemplate redis, com.gate.slot.SlotRepository slots, ReservationService reservations) { this.redis = redis; this.slots = slots; this.reservations = reservations; }
+    private final ReservationRepository reservationRepository;
+    public ReservationQueueWorker(StringRedisTemplate redis, com.gate.slot.SlotRepository slots, ReservationService reservations, ReservationRepository reservationRepository) { this.redis = redis; this.slots = slots; this.reservations = reservations; this.reservationRepository = reservationRepository; }
 
     @Scheduled(fixedDelay = 5000)
     public void cleanQueues() {
+        for (Reservation r : reservationRepository.findByStatus(ReservationStatus.HELD)) if (r.isExpired()) { r.cancel(); if (r.getSeat() != null) r.getSeat().release(); r.getSlot().increaseRemaining(); }
         for (var slot : slots.findAll()) {
             long slotId = slot.getId();
             String key = "gate:queue:slot:" + slotId;

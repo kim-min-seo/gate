@@ -17,6 +17,7 @@ public class Reservation {
     @Enumerated(EnumType.STRING)
     private ReservationStatus status;
     private LocalDateTime createdAt;
+    private LocalDateTime expiresAt;
 
     protected Reservation() {}
 
@@ -25,6 +26,7 @@ public class Reservation {
         this.slot = slot;
         this.status = ReservationStatus.HELD;
         this.createdAt = LocalDateTime.now();
+        this.expiresAt = this.createdAt.plusMinutes(10);
     }
     public void assignSeat(Seat seat) { this.seat = seat; }
     public Seat getSeat() { return seat; }
@@ -34,6 +36,8 @@ public class Reservation {
     public Slot getSlot() { return slot; }
     public ReservationStatus getStatus() { return status; }
     public LocalDateTime getCreatedAt() { return createdAt; }
+    public LocalDateTime getExpiresAt() { return expiresAt; }
+    public boolean isExpired() { return status == ReservationStatus.HELD && expiresAt != null && expiresAt.isBefore(LocalDateTime.now()); }
     public void cancel() { this.status = ReservationStatus.CANCELLED; }
     public void confirm() { this.status = ReservationStatus.CONFIRMED; }
 }
