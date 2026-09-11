@@ -12,13 +12,13 @@ public class ReservationController {
     public ReservationController(ReservationService service) { this.service = service; }
 
     @PostMapping("/reservations")
-    public String reserve(@RequestParam Long slotId, @RequestParam(required=false) Long seatId, jakarta.servlet.http.HttpSession session,
+    public String reserve(@RequestParam Long slotId, @RequestParam(required=false) Long seatId, @RequestParam(required=false) java.util.List<Long> seatIds, jakarta.servlet.http.HttpSession session,
                           RedirectAttributes attributes) {
         Long userId = (Long) session.getAttribute("userId");
         if (userId == null) { attributes.addFlashAttribute("message", "로그인 후 예약할 수 있습니다."); return "redirect:/login"; }
         try {
-            Reservation reservation = seatId == null ? service.reserve(slotId, userId) : service.reserveSeat(slotId, seatId, userId);
-            reservation.confirm();
+            if (seatIds != null && !seatIds.isEmpty()) service.reserveSeats(slotId, seatIds, userId);
+            else { Reservation reservation = seatId == null ? service.reserve(slotId, userId) : service.reserveSeat(slotId, seatId, userId); reservation.confirm(); }
             attributes.addFlashAttribute("message", "예약이 접수되었습니다.");
         } catch (IllegalStateException e) {
             attributes.addFlashAttribute("message", e.getMessage());
