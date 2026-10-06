@@ -20,6 +20,7 @@ public class ReservationService {
         this.reservations = reservations; this.slots = slots; this.seats = seats; this.redis = redis;
     }
     public Slot getSlot(Long id) { return slots.findById(id).orElseThrow(); }
+    public Boolean claimIdempotency(Long userId, String key) { return redis.opsForValue().setIfAbsent("gate:idempotency:" + userId + ":" + key, "done", Duration.ofMinutes(10)); }
 
     @Transactional
     public Reservation reserveSeat(Long slotId, Long seatId, Long userId) {
