@@ -94,10 +94,13 @@ public class ReservationService {
         if (reservation.getSlot().getStartsAt().isBefore(java.time.LocalDateTime.now())) throw new IllegalStateException("입장 시간이 지난 예약은 취소할 수 없습니다.");
         if (reservation.getStatus() != ReservationStatus.HELD && reservation.getStatus() != ReservationStatus.CONFIRMED)
             throw new IllegalStateException("취소할 수 없는 예약 상태입니다.");
+        var active = reservations.findByUserIdAndSlotIdAndStatusIn(userId, reservation.getSlot().getId(), java.util.List.of(ReservationStatus.HELD, ReservationStatus.CONFIRMED));
         payments.findFirstByUserIdAndSlotIdAndStatusOrderByApprovedAtDesc(userId, reservation.getSlot().getId(), PaymentStatus.APPROVED)
                 .ifPresent(payment -> { toss.cancel(payment.getPaymentKey(), "Gate 예약 취소"); payment.cancel(); });
-        reservation.cancel();
-        if (reservation.getSeat() != null) reservation.getSeat().release();
-        reservation.getSlot().increaseRemaining();
+        for (Reservation item : active) {
+            item.cancel();
+            if (item.getSeat() != null) item.getSeat().release();
+            item.getSlot().increaseRemaining();
+        }
     }
 }
