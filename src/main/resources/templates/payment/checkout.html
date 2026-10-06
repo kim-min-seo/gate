@@ -1,31 +1,39 @@
-<!DOCTYPE html><html lang="ko" xmlns:th="http://www.thymeleaf.org"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>결제 | Gate</title><link rel="stylesheet" th:href="@{/css/style.css}"><script src="https://js.tosspayments.com/v2/standard"></script></head><body><main class="container"><nav class="nav"><b class="brand">GATE<span>.</span></b><a href="/slots">예약으로 돌아가기</a></nav><p class="eyebrow">SECURE TEST PAYMENT</p><h1>예약 결제</h1><section class="card"><p><b th:text="${slot.name}">10시 입장</b></p><p>선택 좌석 <b th:text="${#lists.size(seatIds)} + '개'">1개</b></p><p class="price" th:text="${amount} + '원'">10,000원</p><p class="notice">토스페이먼츠 테스트 결제입니다. 실제 금액은 청구되지 않습니다.</p><div id="payment-method"></div><div id="agreement"></div><button class="primary-button" type="button" id="pay-button" disabled>결제창 준비 중...</button><p id="payment-error" class="status" style="display:none"></p></section></main><script th:inline="javascript">
-+const clientKey = /*[[${@environment.getProperty('TOSS_CLIENT_KEY')}]]*/ '';
-+const orderId = /*[[${orderId}]]*/ '';
-+const amount = /*[[${amount}]]*/ 0;
-+const button = document.getElementById('pay-button');
-+const errorBox = document.getElementById('payment-error');
-+async function preparePayment() {
-+  try {
-+    if (!clientKey) throw new Error('TOSS_CLIENT_KEY가 설정되지 않았습니다.');
-+    const tossPayments = TossPayments(clientKey);
-+    const widgets = tossPayments.widgets({customerKey: 'gate-user-' + orderId});
-+    await widgets.setAmount({currency: 'KRW', value: amount});
-+    await Promise.all([
-+      widgets.renderPaymentMethods({selector: '#payment-method'}),
-+      widgets.renderAgreement({selector: '#agreement'})
-+    ]);
-+    button.disabled = false;
-+    button.textContent = '테스트 결제하기';
-+    button.addEventListener('click', () => widgets.requestPayment({
-+      orderId, orderName: 'Gate 예약', customerName: 'Gate 사용자',
-+      successUrl: location.origin + '/payment/success',
-+      failUrl: location.origin + '/payment/fail'
-+    }));
-+  } catch (error) {
-+    errorBox.textContent = '결제창을 준비하지 못했습니다: ' + (error.message || error);
-+    errorBox.style.display = 'block';
-+    button.textContent = '결제창 준비 실패';
-+  }
-+}
-+preparePayment();
-+</script></body></html>
+<!DOCTYPE html><html lang="ko" xmlns:th="http://www.thymeleaf.org"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>결제 | Gate</title><link rel="stylesheet" th:href="@{/css/style.css}"><script src="https://js.tosspayments.com/v2/standard"></script></head><body><main class="container"><nav class="nav"><b class="brand">GATE<span>.</span></b><a href="/slots">예약으로 돌아가기</a></nav><p class="eyebrow">SECURE TEST PAYMENT</p><h1>예약 결제</h1><section class="card"><p><b th:text="${slot.name}">10시 입장</b></p><p>선택 좌석 <b th:text="${#lists.size(seatIds)} + '개'">1개</b></p><p class="price" th:text="${amount} + '원'">10,000원</p><p class="notice">토스페이먼츠 테스트 결제입니다. 실제 금액은 청구되지 않습니다.</p><button class="primary-button" type="button" id="pay-button">테스트 결제창 열기</button><p id="payment-error" class="status" style="display:none"></p></section></main><script th:inline="javascript">
+const clientKey = /*[[${@environment.getProperty('TOSS_CLIENT_KEY')}]]*/ '';
+const orderId = /*[[${orderId}]]*/ '';
+const amount = /*[[${amount}]]*/ 0;
+const button = document.getElementById('pay-button');
+const errorBox = document.getElementById('payment-error');
+let widgets;
+async function preparePayment() {
+  try {
+    if (!clientKey) throw new Error('TOSS_CLIENT_KEY가 설정되지 않았습니다.');
+    const tossPayments = TossPayments(clientKey);
+    widgets = tossPayments.widgets({customerKey: 'gate-user-' + orderId});
+    await widgets.setAmount({currency: 'KRW', value: amount});
+  } catch (error) {
+    button.disabled = true;
+    button.textContent = '결제 준비 실패';
+    errorBox.textContent = '결제창을 준비하지 못했습니다: ' + (error.message || error);
+    errorBox.style.display = 'block';
+  }
+}
+button.addEventListener('click', async () => {
+  try {
+    button.disabled = true;
+    button.textContent = '결제창 여는 중...';
+    const paymentWindow = await widgets.renderPaymentWindow({orderName: 'Gate 예약'});
+    paymentWindow.on('paymentRequest', ({paymentMethod}) => widgets.requestPayment({
+      method: paymentMethod.code, orderId, orderName: 'Gate 예약',
+      successUrl: location.origin + '/payment/success',
+      failUrl: location.origin + '/payment/fail'
+    }));
+  } catch (error) {
+    button.disabled = false;
+    button.textContent = '테스트 결제창 열기';
+    errorBox.textContent = '결제창을 열지 못했습니다: ' + (error.message || error);
+    errorBox.style.display = 'block';
+  }
+});
+preparePayment();
+</script></body></html>
