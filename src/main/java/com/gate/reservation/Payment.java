@@ -24,7 +24,10 @@ public class Payment {
         this.status = PaymentStatus.APPROVED; this.approvedAt = LocalDateTime.now();
     }
     public String getPaymentKey() { return paymentKey; }
+    public Long getId() { return id; }
+    public Long getUserId() { return userId; }
     public String getOrderId() { return orderId; }
     public int getAmount() { return amount; }
     public PaymentStatus getStatus() { return status; }
+    public LocalDateTime getApprovedAt() { return approvedAt; }
 }
