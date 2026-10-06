@@ -5,12 +5,16 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import java.time.Duration;
+import java.util.UUID;
 
 @Controller
 public class ReservationController {
     private final ReservationService service;
+    private final StringRedisTemplate redis;
 
-    public ReservationController(ReservationService service) { this.service = service; }
+    public ReservationController(ReservationService service, StringRedisTemplate redis) { this.service = service; this.redis = redis; }
 
     @PostMapping("/reservations")
     public String reserve(@RequestParam Long slotId, @RequestParam(required=false) Long seatId, @RequestParam(required=false) java.util.List<Long> seatIds, @RequestParam(defaultValue="card") String paymentMethod, @RequestParam(required=false) String cardNumber, @RequestParam(required=false) String expiry, @RequestParam(required=false) String cvc, @RequestParam(required=false) String phoneNumber, @RequestParam(required=false) String depositor, @RequestHeader(value="Idempotency-Key", required=false) String idempotencyKey, jakarta.servlet.http.HttpSession session,
@@ -38,7 +42,12 @@ public class ReservationController {
     public String payment(@RequestParam Long slotId, @RequestParam java.util.List<Long> seatIds, jakarta.servlet.http.HttpSession session, org.springframework.ui.Model model) {
         Long userId = (Long) session.getAttribute("userId"); if (userId == null) return "redirect:/login";
         if (seatIds.size() < 1 || seatIds.size() > 4) return "redirect:/slots/" + slotId + "/seats";
-        model.addAttribute("slot", service.getSlot(slotId)); model.addAttribute("seatIds", seatIds); return "payment/checkout";
+        String orderId = "GATE-" + UUID.randomUUID();
+        String payload = slotId + "|" + String.join(",", seatIds.stream().map(String::valueOf).toList()) + "|" + userId;
+        redis.opsForValue().set("gate:payment:order:" + orderId, payload, Duration.ofMinutes(10));
+        model.addAttribute("slot", service.getSlot(slotId)); model.addAttribute("seatIds", seatIds);
+        model.addAttribute("orderId", orderId); model.addAttribute("amount", seatIds.size() * 10000);
+        return "payment/checkout";
     }
 
     @PostMapping("/reservations/auto")
