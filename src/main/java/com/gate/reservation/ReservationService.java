@@ -15,9 +15,11 @@ public class ReservationService {
     private final SlotRepository slots;
     private final SeatRepository seats;
     private final StringRedisTemplate redis;
+    private final PaymentRepository payments;
+    private final TossPaymentService toss;
 
-    public ReservationService(ReservationRepository reservations, SlotRepository slots, SeatRepository seats, StringRedisTemplate redis) {
-        this.reservations = reservations; this.slots = slots; this.seats = seats; this.redis = redis;
+    public ReservationService(ReservationRepository reservations, SlotRepository slots, SeatRepository seats, StringRedisTemplate redis, PaymentRepository payments, TossPaymentService toss) {
+        this.reservations = reservations; this.slots = slots; this.seats = seats; this.redis = redis; this.payments = payments; this.toss = toss;
     }
     public Slot getSlot(Long id) { return slots.findById(id).orElseThrow(); }
     public Boolean claimIdempotency(Long userId, String key) { return redis.opsForValue().setIfAbsent("gate:idempotency:" + userId + ":" + key, "done", Duration.ofMinutes(10)); }
@@ -92,6 +94,8 @@ public class ReservationService {
         if (reservation.getSlot().getStartsAt().isBefore(java.time.LocalDateTime.now())) throw new IllegalStateException("입장 시간이 지난 예약은 취소할 수 없습니다.");
         if (reservation.getStatus() != ReservationStatus.HELD && reservation.getStatus() != ReservationStatus.CONFIRMED)
             throw new IllegalStateException("취소할 수 없는 예약 상태입니다.");
+        payments.findFirstByUserIdAndSlotIdAndStatusOrderByApprovedAtDesc(userId, reservation.getSlot().getId(), PaymentStatus.APPROVED)
+                .ifPresent(payment -> { toss.cancel(payment.getPaymentKey(), "Gate 예약 취소"); payment.cancel(); });
         reservation.cancel();
         if (reservation.getSeat() != null) reservation.getSeat().release();
         reservation.getSlot().increaseRemaining();

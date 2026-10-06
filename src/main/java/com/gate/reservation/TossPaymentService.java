@@ -25,4 +25,13 @@ public class TossPaymentService {
                 .body(Map.of("paymentKey", paymentKey, "orderId", orderId, "amount", amount))
                 .retrieve().body(Map.class);
     }
+
+    public Map<?, ?> cancel(String paymentKey, String reason) {
+        if (secretKey == null || secretKey.isBlank()) throw new IllegalStateException("TOSS_SECRET_KEY가 설정되지 않았습니다.");
+        String auth = Base64.getEncoder().encodeToString((secretKey + ":").getBytes(StandardCharsets.UTF_8));
+        return client.post().uri("/payments/" + paymentKey + "/cancel")
+                .header(HttpHeaders.AUTHORIZATION, "Basic " + auth)
+                .header(HttpHeaders.CONTENT_TYPE, "application/json")
+                .body(Map.of("cancelReason", reason)).retrieve().body(Map.class);
+    }
 }

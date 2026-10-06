@@ -34,7 +34,7 @@ public class PaymentController {
             if (payments.existsByPaymentKey(paymentKey)) throw new IllegalStateException("이미 승인된 결제입니다.");
             toss.confirm(paymentKey, orderId, amount);
             reservations.reserveSeats(slotId, seatIds, userId);
-            payments.save(new Payment(paymentKey, orderId, amount, userId));
+            payments.save(new Payment(paymentKey, orderId, amount, userId, slotId));
             redis.delete("gate:payment:order:" + orderId);
             attributes.addFlashAttribute("message", "테스트 결제가 승인되고 예약이 확정되었습니다.");
         } catch (RuntimeException e) { attributes.addFlashAttribute("message", "결제 승인 실패: " + e.getMessage()); }
