@@ -71,3 +71,9 @@ AI는 코드 초안과 오류 원인 후보를 제시하는 데 활용했습니�
 ## 자동 좌석 배정
 
 좌석을 직접 선택하지 않아도 사용자가 선택한 시간대의 빈 좌석을 서버가 무작위로 선택해 예약합니다. 후보 좌석을 섞은 뒤 기존 Redis 분산 락과 PostgreSQL 좌석 락을 적용해 동시에 요청해도 같은 좌석이 중복 배정되지 않도록 처리합니다.
+
+## 장애 확인
+docker compose ps에서 PostgreSQL과 Redis가 healthy인지 확인합니다. PostgreSQL은 pg_isready, Redis는 edis-cli ping으로 연결 상태를 검사합니다.
+
+## CI
+GitHub Actions는 Java 25 환경에서 Docker 의존성을 healthy 상태까지 기다린 뒤 전체 Gradle 테스트를 실행합니다.
