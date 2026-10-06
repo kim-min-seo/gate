@@ -22,6 +22,7 @@ public class SlotDataInitializer {
                 }
             }
             for (Slot slot : repository.findAll()) {
+                if (seatRepository.countBySlot(slot) >= 100) continue;
                 for (int row = 1; row <= 10; row++) for (char col = 'A'; col <= 'J'; col++) {
                     String label = row + "-" + col;
                     if (!seatRepository.existsBySlotAndLabel(slot, label)) seatRepository.save(new Seat(label, slot));
