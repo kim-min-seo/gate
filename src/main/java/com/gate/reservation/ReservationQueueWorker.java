@@ -3,6 +3,7 @@ package com.gate.reservation;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 @Component
 public class ReservationQueueWorker {
@@ -13,6 +14,7 @@ public class ReservationQueueWorker {
     public ReservationQueueWorker(StringRedisTemplate redis, com.gate.slot.SlotRepository slots, ReservationService reservations, ReservationRepository reservationRepository) { this.redis = redis; this.slots = slots; this.reservations = reservations; this.reservationRepository = reservationRepository; }
 
     @Scheduled(fixedDelay = 5000)
+    @Transactional
     public void cleanQueues() {
         for (Reservation r : reservationRepository.findByStatus(ReservationStatus.HELD)) if (r.isExpired()) { r.cancel(); if (r.getSeat() != null) r.getSeat().release(); r.getSlot().increaseRemaining(); }
         for (var slot : slots.findAll()) {
