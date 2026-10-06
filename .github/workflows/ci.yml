@@ -19,5 +19,11 @@ jobs:
           java-version: '25'
       - name: Start dependencies
         run: docker compose up -d postgres redis
+      - name: Wait for dependencies
+        run: |
+          for i in {1..30}; do
+            docker compose ps | grep -q "Up" && break
+            sleep 2
+          done
       - name: Run tests
-        run: ./gradlew test --no-daemon --console=plain
+        run: chmod +x gradlew && ./gradlew test --no-daemon --console=plain
