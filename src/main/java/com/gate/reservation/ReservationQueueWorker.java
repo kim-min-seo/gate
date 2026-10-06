@@ -23,7 +23,7 @@ public class ReservationQueueWorker {
             java.util.HashSet<String> seen = new java.util.HashSet<>();
             for (String user : users) if (!seen.add(user)) redis.opsForList().remove(key, 1, user);
             String next = redis.opsForList().leftPop(key);
-            if (next != null && slot.getRemaining() > 0) try { reservations.autoReserve(slotId, Long.parseLong(next)); } catch (RuntimeException ignored) { }
+            if (next != null && slot.getRemaining() > 0) try { reservations.autoReserve(slotId, Long.parseLong(next)); } catch (RuntimeException ignored) { redis.opsForList().rightPush(key, next); }
         }
     }
 }
