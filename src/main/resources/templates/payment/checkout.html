@@ -9,7 +9,8 @@ async function preparePayment() {
   try {
     if (!clientKey) throw new Error('TOSS_CLIENT_KEY가 설정되지 않았습니다.');
     const tossPayments = TossPayments(clientKey);
-    widgets = tossPayments.widgets({customerKey: 'gate-user-' + orderId});
+    // customerKey는 2~50자여야 하므로 주문번호 전체를 넣지 않는다.
+    widgets = tossPayments.widgets({customerKey: 'GATE-ANONYMOUS'});
     await widgets.setAmount({currency: 'KRW', value: amount});
   } catch (error) {
     button.disabled = true;
