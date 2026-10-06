@@ -85,3 +85,12 @@ GitHub Actions는 Java 25 환경에서 Docker 의존성을 healthy 상태까지 
 ```text
 requests=200 success=100 saved=100 elapsedMs=1142 remaining=0
 ```
+## 배포 전 체크리스트
+
+- `GATE_ADMIN_EMAIL`을 실제 관리자 계정으로 설정
+- DB·Redis 비밀번호를 환경 변수로 분리
+- `docker compose ps`에서 두 서비스가 healthy인지 확인
+- `./gradlew test --no-daemon` 통과 확인
+- `/actuator/health`가 UP인지 확인
+- HTTPS와 방화벽을 배포 서버에서 설정
+- 배포 전 DB 백업과 롤백 이미지를 준비
