@@ -77,3 +77,11 @@ docker compose ps에서 PostgreSQL과 Redis가 healthy인지 확인합니다. Po
 
 ## CI
 GitHub Actions는 Java 25 환경에서 Docker 의존성을 healthy 상태까지 기다린 뒤 전체 Gradle 테스트를 실행합니다.
+
+## 부하 검증 결과
+
+200개의 동시 예약 요청을 100석 슬롯에 보낸 결과 100건만 성공하고 초과 요청은 거절되었습니다.
+
+```text
+requests=200 success=100 saved=100 elapsedMs=1142 remaining=0
+```
