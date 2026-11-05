@@ -35,4 +35,15 @@ class TossPaymentRecoveryTest {
         var gateway = new TossPaymentService("live_secret", RestClient.builder());
         assertThrows(IllegalStateException.class, () -> gateway.confirm("key-a", "order-a", 10000));
     }
+    @Test void lostCancellationResponseIsVerifiedByQuery(){
+        var builder=RestClient.builder();
+        var server=MockRestServiceServer.bindTo(builder).build();
+        var gateway=new TossPaymentService("test_secret",builder);
+        server.expect(requestTo("https://api.tosspayments.com/v1/payments/key-a/cancel"))
+                .andExpect(header("Idempotency-Key","gate-cancel-key-a"))
+                .andRespond(withException(new SocketTimeoutException("simulated timeout")));
+        server.expect(requestTo("https://api.tosspayments.com/v1/payments/key-a"))
+                .andRespond(withSuccess("{\"paymentKey\":\"key-a\",\"status\":\"CANCELED\"}",MediaType.APPLICATION_JSON));
+        assertEquals("CANCELED",gateway.cancel("key-a","test cancellation").get("status"));server.verify();
+    }
 }

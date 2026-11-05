@@ -34,7 +34,28 @@ public class PaymentRecoveryService {
         jobs.saveAndFlush(new PaymentRecovery(orderId,paymentKey,userId,slotId,amount));
     }
     @Transactional(propagation=Propagation.REQUIRES_NEW)
-    public void resolve(String orderId){jobs.findById(orderId).ifPresent(PaymentRecovery::resolve);}
+    public void resolve(String orderId){
+        var job=jobs.findById(orderId).orElseThrow();
+        slots.findByIdForUpdate(job.getSlotId()).orElseThrow();
+        if(em!=null) em.refresh(job);
+        if(!job.isCancellationRequested()) job.resolve();
+    }
+
+    @Transactional(propagation=Propagation.REQUIRES_NEW)
+    public void prepareCancellation(Long reservationId, Long userId){
+        var item=reservations.findByIdAndUserId(reservationId,userId).orElseThrow();
+        slots.findByIdForUpdate(item.getSlot().getId()).orElseThrow();
+        if(em!=null) em.refresh(item);
+        if(!item.getSlot().getStartsAt().isAfter(java.time.LocalDateTime.now())) throw new IllegalStateException("입장 시간이 지난 예약입니다.");
+        if(item.getStatus()!=ReservationStatus.HELD && item.getStatus()!=ReservationStatus.CONFIRMED) throw new IllegalStateException("이미 취소되었거나 만료된 예약입니다.");
+        if(item.getOrderId()==null) return;
+        var job=jobs.findById(item.getOrderId()).orElse(null);
+        var local=payments.findByOrderId(item.getOrderId()).orElse(null);
+        if(job==null && local==null) return;
+        if(job==null) job=new PaymentRecovery(local.getOrderId(),local.getPaymentKey(),userId,item.getSlot().getId(),local.getAmount());
+        if(!job.isCancellationRequested()) job.requestCancellation();
+        jobs.saveAndFlush(job);
+    }
 
     @Transactional
     public void reconcile(String orderId){
@@ -48,7 +69,7 @@ public class PaymentRecoveryService {
         if(em!=null) em.refresh(job);
         if(!"PENDING".equals(job.getStatus())) return;
         var local=payments.findByOrderId(job.getOrderId()).orElse(null);
-        if(local!=null){
+        if(local!=null && !job.isCancellationRequested()){
             if(local.getPaymentKey().equals(job.getPaymentKey()) && local.getUserId().equals(job.getUserId()) && local.getAmount()==job.getAmount()) job.resolve();
             else job.manual("LOCAL_PAYMENT_MISMATCH");
             return;
@@ -61,6 +82,15 @@ public class PaymentRecoveryService {
             }
             var held=reservations.findByOrderIdAndUserId(job.getOrderId(),job.getUserId());
             String status=String.valueOf(remote.get("status"));
+            if(job.isCancellationRequested()){
+                if("DONE".equals(status)){
+                    var cancelled=gateway.cancel(job.getPaymentKey(),"Gate requested order cancellation recovery");
+                    if(cancelled==null||!"CANCELED".equals(cancelled.get("status"))){job.retry("CANCELLATION_NOT_CONFIRMED");return;}
+                } else if(!Set.of("CANCELED","ABORTED","EXPIRED").contains(status)) {job.retry("CANCELLATION_NOT_CONFIRMED");return;}
+                if(local==null) {if("DONE".equals(status)||"CANCELED".equals(status)) saveCancelledPayment(job);}
+                else local.cancel();
+                releaseCancelledOrder(held);job.resolve();return;
+            }
             if("DONE".equals(status)){
                 boolean valid=held.size()*10000==job.getAmount() && !held.isEmpty()
                         && held.stream().allMatch(r->r.getStatus()==ReservationStatus.HELD&&!r.isExpired());
@@ -80,6 +110,11 @@ public class PaymentRecoveryService {
         } catch(RuntimeException failure){
             // Do not persist raw provider messages, credentials or card details.
             job.retry("GATEWAY_UNAVAILABLE");
+        }
+    }
+    private void releaseCancelledOrder(List<Reservation> items){
+        for(var item:items) if(item.getStatus()==ReservationStatus.HELD || item.getStatus()==ReservationStatus.CONFIRMED){
+            item.cancel();if(item.getSeat()!=null)item.getSeat().release();item.getSlot().increaseRemaining();
         }
     }
     private void saveCancelledPayment(PaymentRecovery job){

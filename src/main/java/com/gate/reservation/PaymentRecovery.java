@@ -13,6 +13,7 @@ public class PaymentRecovery {
     private int amount;
     private String status;
     private int attempts;
+    private boolean cancellationRequested;
     private String lastError;
     private LocalDateTime nextAttemptAt;
     protected PaymentRecovery() {}
@@ -28,6 +29,8 @@ public class PaymentRecovery {
     public String getStatus(){return status;}
     public int getAttempts(){return attempts;}
     public String getLastError(){return lastError;}
+    public boolean isCancellationRequested(){return cancellationRequested;}
+    public void requestCancellation(){cancellationRequested=true;status="PENDING";attempts=0;lastError=null;nextAttemptAt=LocalDateTime.now().plusMinutes(1);}
     public void resolve(){status="RESOLVED";lastError=null;}
     public void manual(String reason){status="MANUAL_REVIEW";lastError=reason;}
     public void retry(String reason){

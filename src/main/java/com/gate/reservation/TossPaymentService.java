@@ -60,9 +60,17 @@ public class TossPaymentService {
                 .header(HttpHeaders.AUTHORIZATION, authorization()).retrieve().body(Map.class);
     }
     public Map<?, ?> cancel(String paymentKey, String reason) {
-        return client.post().uri("/payments/{key}/cancel", paymentKey)
-                .header(HttpHeaders.AUTHORIZATION, authorization())
-                .header("Idempotency-Key", "gate-cancel-" + paymentKey)
-                .body(Map.of("cancelReason", reason)).retrieve().body(Map.class);
+        Map<?, ?> result;
+        try {
+            result = client.post().uri("/payments/{key}/cancel", paymentKey)
+                    .header(HttpHeaders.AUTHORIZATION, authorization())
+                    .header("Idempotency-Key", "gate-cancel-" + paymentKey)
+                    .body(Map.of("cancelReason", reason)).retrieve().body(Map.class);
+        } catch(ResourceAccessException | RestClientResponseException failure){
+            result = find(paymentKey);
+        }
+        if(result==null || !paymentKey.equals(result.get("paymentKey")) || !"CANCELED".equals(result.get("status")))
+            throw new IllegalStateException("전체 결제 취소를 확인하지 못했습니다.");
+        return result;
     }
 }

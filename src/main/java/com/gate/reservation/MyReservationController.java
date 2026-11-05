@@ -13,8 +13,9 @@ public class MyReservationController {
     private final ReservationService service;
     private final PaymentRepository payments;
     private final PaymentRecoveryRepository recovery;
+    private final PaymentRecoveryService recoveryService;
 
-    public MyReservationController(ReservationService service, PaymentRepository payments, PaymentRecoveryRepository recovery) { this.service = service; this.payments = payments; this.recovery = recovery; }
+    public MyReservationController(ReservationService service, PaymentRepository payments, PaymentRecoveryRepository recovery, PaymentRecoveryService recoveryService) { this.service = service; this.payments = payments; this.recovery = recovery; this.recoveryService = recoveryService; }
 
     @GetMapping("/my-reservations")
     public String mine(HttpSession session, Model model) {
@@ -30,8 +31,8 @@ public class MyReservationController {
     public String cancel(@RequestParam Long reservationId, HttpSession session, RedirectAttributes attributes) {
         Long userId = (Long) session.getAttribute("userId");
         if (userId == null) return "redirect:/login";
-        try { service.cancel(reservationId, userId); attributes.addFlashAttribute("message", "예약이 취소되었습니다."); }
-        catch (RuntimeException e) { attributes.addFlashAttribute("message", e.getMessage()); }
+        try { recoveryService.prepareCancellation(reservationId, userId); service.cancel(reservationId, userId); attributes.addFlashAttribute("message", "예약이 취소되었습니다."); }
+        catch (RuntimeException e) { attributes.addFlashAttribute("message", "취소 처리를 확인하지 못했습니다. 결제 확인 중 안내가 있으면 자동 재조회됩니다."); }
         return "redirect:/my-reservations";
     }
 }
