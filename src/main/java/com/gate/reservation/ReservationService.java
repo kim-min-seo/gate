@@ -17,6 +17,7 @@ public class ReservationService {
     private final StringRedisTemplate redis;
     private final PaymentRepository payments;
     private final TossPaymentService toss;
+    @jakarta.persistence.PersistenceContext private jakarta.persistence.EntityManager entityManager;
 
     public ReservationService(ReservationRepository reservations, SlotRepository slots, SeatRepository seats, StringRedisTemplate redis, PaymentRepository payments, TossPaymentService toss) {
         this.reservations = reservations; this.slots = slots; this.seats = seats; this.redis = redis; this.payments = payments; this.toss = toss;
@@ -88,6 +89,27 @@ public class ReservationService {
         }
     }
 
+    @Transactional(readOnly = true)
+    public java.util.List<Long> selectAvailableSeats(Long slotId, int count) {
+        if (count < 1 || count > 4) throw new IllegalStateException("1~4매를 선택하세요.");
+        var available = new java.util.ArrayList<>(seats.findAllBySlotOrderByLabelAsc(getSlot(slotId))
+                .stream().filter(seat -> !seat.isReserved()).toList());
+        java.util.Collections.shuffle(available);
+        if (available.size() < count) throw new IllegalStateException("남은 좌석이 부족합니다.");
+        return available.subList(0, count).stream().map(Seat::getId).toList();
+    }
+
+    @Transactional
+    public void expireReservation(Long id, Long slotId) {
+        slots.findByIdForUpdate(slotId).orElseThrow();
+        var item = reservations.findById(id).orElseThrow();
+        entityManager.refresh(item);
+        if (!item.isExpired()) return;
+        item.cancel();
+        if (item.getSeat() != null) item.getSeat().release();
+        item.getSlot().increaseRemaining();
+    }
+
     public Long queuePosition(Long slotId, Long userId) {
         java.util.List<String> queue = redis.opsForList().range("gate:queue:slot:" + slotId, 0, -1);
         if (queue == null) return null;
@@ -116,6 +138,8 @@ public class ReservationService {
     public void cancel(Long reservationId, Long userId) {
         Reservation reservation = reservations.findByIdAndUserId(reservationId, userId)
                 .orElseThrow(() -> new IllegalArgumentException("예약을 찾을 수 없습니다."));
+        slots.findByIdForUpdate(reservation.getSlot().getId()).orElseThrow();
+        if (entityManager != null) entityManager.refresh(reservation);
         if (reservation.getSlot().getStartsAt().isBefore(java.time.LocalDateTime.now())) throw new IllegalStateException("입장 시간이 지난 예약은 취소할 수 없습니다.");
         if (reservation.getStatus() != ReservationStatus.HELD && reservation.getStatus() != ReservationStatus.CONFIRMED)
             throw new IllegalStateException("취소할 수 없는 예약 상태입니다.");
@@ -124,12 +148,19 @@ public class ReservationService {
                 ? java.util.List.of(reservation)
                 : reservations.findByOrderIdAndUserId(reservation.getOrderId(), userId);
         if (reservation.getOrderId() != null) {
-            var payment = payments.findByOrderId(reservation.getOrderId()).orElseThrow();
-            if (payment.getStatus() != PaymentStatus.APPROVED) throw new IllegalStateException("Order already cancelled");
-            toss.cancel(payment.getPaymentKey(), "Gate order cancellation");
-            payment.cancel();
+            var payment = payments.findByOrderId(reservation.getOrderId()).orElse(null);
+            if (payment != null) {
+                if (entityManager != null) entityManager.refresh(payment);
+                if (payment.getStatus() != PaymentStatus.APPROVED) throw new IllegalStateException("이미 취소된 주문입니다.");
+                toss.cancel(payment.getPaymentKey(), "Gate order cancellation");
+                payment.cancel();
+            } else if (reservation.getStatus() == ReservationStatus.CONFIRMED) {
+                throw new IllegalStateException("결제 연결 확인이 필요합니다. 관리자에게 문의하세요.");
+            }
         }
         for (Reservation item : active) {
+            if (entityManager != null) entityManager.refresh(item);
+            if (item.getStatus() != ReservationStatus.HELD && item.getStatus() != ReservationStatus.CONFIRMED) continue;
             item.cancel();
             if (item.getSeat() != null) item.getSeat().release();
             item.getSlot().increaseRemaining();

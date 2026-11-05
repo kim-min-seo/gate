@@ -14,9 +14,8 @@ public class ReservationQueueWorker {
     public ReservationQueueWorker(StringRedisTemplate redis, com.gate.slot.SlotRepository slots, ReservationService reservations, ReservationRepository reservationRepository) { this.redis = redis; this.slots = slots; this.reservations = reservations; this.reservationRepository = reservationRepository; }
 
     @Scheduled(fixedDelay = 5000)
-    @Transactional
     public void cleanQueues() {
-        for (Reservation r : reservationRepository.findByStatus(ReservationStatus.HELD)) if (r.isExpired()) { r.cancel(); if (r.getSeat() != null) r.getSeat().release(); r.getSlot().increaseRemaining(); }
+        for (Reservation r : reservationRepository.findByStatus(ReservationStatus.HELD)) if (r.isExpired()) { reservations.expireReservation(r.getId(), r.getSlot().getId()); }
         for (var slot : slots.findAll()) {
             long slotId = slot.getId();
             String key = "gate:queue:slot:" + slotId;
@@ -25,7 +24,7 @@ public class ReservationQueueWorker {
             java.util.HashSet<String> seen = new java.util.HashSet<>();
             for (String user : users) if (!seen.add(user)) redis.opsForList().remove(key, 1, user);
             String next = redis.opsForList().leftPop(key);
-            if (next != null && slot.getRemaining() > 0) try { reservations.autoReserve(slotId, Long.parseLong(next)); } catch (RuntimeException ignored) { redis.opsForList().rightPush(key, next); }
+            if (next != null) redis.opsForValue().set("gate:queue:ready:" + slotId + ":" + next, "ready", java.time.Duration.ofMinutes(1));
         }
     }
 }

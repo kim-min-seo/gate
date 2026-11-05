@@ -18,8 +18,8 @@ public class AuthController {
 
     @PostMapping("/signup")
     public String signup(@RequestParam String email, @RequestParam String password,
-                         HttpSession session, RedirectAttributes attributes) {
-        if (!email.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$") || password.length() < 8) {
+                         HttpSession session, jakarta.servlet.http.HttpServletRequest request, RedirectAttributes attributes) {
+        if (!email.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$") || password.length() < 8 || password.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 72) {
             attributes.addFlashAttribute("error", "올바른 이메일과 8자 이상 비밀번호를 입력하세요."); return "redirect:/signup";
         }
         if (users.existsByEmail(email)) {
@@ -27,6 +27,7 @@ public class AuthController {
             return "redirect:/signup";
         }
         User user = users.save(new User(email, encoder.encode(password)));
+        request.changeSessionId();
         session.setAttribute("userId", user.getId());
         session.setAttribute("userEmail", user.getEmail());
         return "redirect:/slots";
@@ -37,12 +38,13 @@ public class AuthController {
 
     @PostMapping("/login")
     public String login(@RequestParam String email, @RequestParam String password,
-                        HttpSession session, RedirectAttributes attributes) {
+                        HttpSession session, jakarta.servlet.http.HttpServletRequest request, RedirectAttributes attributes) {
         User user = users.findByEmail(email).orElse(null);
         if (user == null || !encoder.matches(password, user.getPasswordHash())) {
             attributes.addFlashAttribute("error", "이메일 또는 비밀번호가 올바르지 않습니다.");
             return "redirect:/login";
         }
+        request.changeSessionId();
         session.setAttribute("userId", user.getId());
         session.setAttribute("userEmail", user.getEmail());
         return "redirect:/slots";

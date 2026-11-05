@@ -127,3 +127,11 @@ requests=200 success=100 saved=100 elapsedMs=1142 remaining=0
 - SITE_ADDRESS must resolve to the server. Allow inbound TCP 80/443; restrict SSH to the operator.
 - Pending: payment timeout/reconciliation tests, historical payment-to-reservation linkage, CSRF protection, database migrations, backup/restore verification, container build and browser end-to-end verification.
 - Public deployment is not complete. A cloud account, server, address and budget choice remain required.
+
+## Safety review 2026-11-05
+- Removed the legacy direct reservation confirmation endpoint. Auto-assignment now selects seats and follows checkout.
+- Enabled Spring Security CSRF filtering and Thymeleaf form tokens. Live HTTP verification: login 200, token present, cancellation without token 403, health 200.
+- Session ID rotates after login/signup. Payment customer identifiers are session-specific UUIDs. Payment API accepts test secret keys only.
+- Cancellation and expiration recheck reservation state under the slot lock. Unpaid holds may be cancelled without a payment record.
+- Queue processing no longer creates reservations without checkout; admission-ready signalling is basic and requires further UI integration.
+- Remaining blockers: approval timeout/reconciliation, compensation failure recovery, historical unlinked payments, migration/backups, full browser payment/cancellation regression. Do not treat passing unit tests as end-to-end payment verification.
