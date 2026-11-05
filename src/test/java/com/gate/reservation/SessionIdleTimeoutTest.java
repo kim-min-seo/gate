@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @SpringBootTest
 class SessionIdleTimeoutTest {
     @Autowired SessionRepository sessions;
+    @Autowired org.springframework.data.redis.core.StringRedisTemplate redis;
     @Test void newSessionUsesThirtyMinuteIdleTimeout(){
         var session=sessions.createSession();
         assertEquals(Duration.ofMinutes(30),session.getMaxInactiveInterval());
@@ -36,5 +37,10 @@ class SessionIdleTimeoutTest {
             loaded.setLastAccessedTime(Instant.now());sessions.save(loaded);
             assertTrue(sessions.findById(session.getId()).getLastAccessedTime().isAfter(Instant.now().minusSeconds(5)));
         }finally{sessions.deleteById(session.getId());}
+    }
+    @Test void sessionIsActuallyStoredInTheGateNamespace(){
+        var session=sessions.createSession();sessions.save(session);
+        try{assertTrue(Boolean.TRUE.equals(redis.hasKey("gate:session:sessions:"+session.getId())));}
+        finally{sessions.deleteById(session.getId());}
     }
 }

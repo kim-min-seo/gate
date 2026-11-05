@@ -8,9 +8,10 @@ import org.springframework.security.web.SecurityFilterChain;
 @Configuration
 public class WebSecurityConfiguration {
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain securityFilterChain(HttpSecurity http, SessionAccessDeniedHandler accessDeniedHandler) throws Exception {
         // Controllers enforce the existing session login; CSRF applies to all state-changing requests.
-        return http.authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+        return http.exceptionHandling(errors -> errors.accessDeniedHandler(accessDeniedHandler))
+                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())
                 .logout(logout -> logout.disable())
