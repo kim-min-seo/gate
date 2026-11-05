@@ -8,7 +8,7 @@ Gate는 좌석 예약 서비스입니다. 사용자는 시간대를 선택하고
 - Spring MVC, Thymeleaf, Spring Data JPA, Validation, Actuator
 
 ## 현재 구현한 기능
-- 회원가입, 로그인, 로그아웃 및 10분 세션 만료
+- 회원가입, 로그인, 로그아웃 및 30분 무활동 세션 만료(Redis 저장)
 - 10시·14시·18시 고정 입장 시간대
 - 시간대별 100석 좌석 선택 화면
 - 결제수단 선택 화면(카드·간편결제·무통장입금 모의 흐름)
@@ -73,7 +73,8 @@ AI는 코드 초안과 오류 원인 후보를 제시하는 데 활용했습니�
 좌석을 직접 선택하지 않아도 사용자가 선택한 시간대의 빈 좌석을 서버가 무작위로 선택해 예약합니다. 후보 좌석을 섞은 뒤 기존 Redis 분산 락과 PostgreSQL 좌석 락을 적용해 동시에 요청해도 같은 좌석이 중복 배정되지 않도록 처리합니다.
 
 ## 장애 확인
-docker compose ps에서 PostgreSQL과 Redis가 healthy인지 확인합니다. PostgreSQL은 pg_isready, Redis는 edis-cli ping으로 연결 상태를 검사합니다.
+docker compose ps에서 PostgreSQL과 Redis가 healthy인지 확인합니다. PostgreSQL은 pg_isready, Redis는 
+edis-cli ping으로 연결 상태를 검사합니다.
 
 ## CI
 GitHub Actions는 Java 25 환경에서 Docker 의존성을 healthy 상태까지 기다린 뒤 전체 Gradle 테스트를 실행합니다.
@@ -195,3 +196,13 @@ $backup = .\scripts\backup-db.ps1
 - 토스 결제창 닫기 이벤트에서 버튼/창 상태를 초기화하고 결제 요청 Promise의 오류를 안내합니다.
 - PostgreSQL 통합 테스트: 4석 자동→자동→수동 교체, 실패 시 롤백, 결제 확인 중 주문 보호, 타 사용자 좌석 보호, 확정 예약 보호.
 - 실행 서버 HTTP 검증: `pwsh -File scripts/verify-checkout-reselection.ps1` 및 기존 `verify-local.ps1` 통과. 토스 SDK 닫기/브라우저 뒤로가기를 포함한 실제 UI 인증은 별도 수동 검증 대상입니다.
+
+
+## 로그인 세션 유지
+
+- 서버 메모리 대신 Spring Session Redis에 로그인 상태를 저장합니다. 마지막 서버 요청부터 30분간 접근이 없으면 만료됩니다. 페이지 이동/새로고침 등 요청이 발생하면 기준 시각이 갱신되며, 무조건 유지시키는 주기적 요청은 보내지 않습니다.
+- Gate 전용 `GATE_SESSION` 쿠키(HttpOnly, SameSite=Lax)를 사용합니다. 배포 환경에서는 Secure 쿠키를 강제합니다.
+- Redis namespace는 `gate:session`입니다. Redis 자체 데이터가 초기화되거나 쿠키를 삭제/차단하면 로그인은 유지되지 않습니다. Redis AOF 저장을 활성화했습니다.
+- 자동 테스트: 기본 만료 1800초, 마지막 접근 29분 전 유지/31분 전 만료, 새 접근 후 기준 갱신 통과. 31분 실시간 대기 대신 저장 시각을 조정한 검증입니다.
+- 실제 앱 재시작 전후에 동일 쿠키로 인증 요청이 유지됨을 확인했습니다. 재현: `scripts/verify-session-restart.ps1 -Phase BeforeRestart` → 앱 재시작 → `-Phase AfterRestart`.
+- 세션 저장 방식 변경 직후에는 기존 메모리 세션에서 새 Redis 세션으로 자동 이전되지 않으므로 한 번 다시 로그인해야 합니다.
