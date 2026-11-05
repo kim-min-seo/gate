@@ -12,14 +12,16 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class MyReservationController {
     private final ReservationService service;
     private final PaymentRepository payments;
+    private final PaymentRecoveryRepository recovery;
 
-    public MyReservationController(ReservationService service, PaymentRepository payments) { this.service = service; this.payments = payments; }
+    public MyReservationController(ReservationService service, PaymentRepository payments, PaymentRecoveryRepository recovery) { this.service = service; this.payments = payments; this.recovery = recovery; }
 
     @GetMapping("/my-reservations")
     public String mine(HttpSession session, Model model) {
         Long userId = (Long) session.getAttribute("userId");
         if (userId == null) return "redirect:/login";
         model.addAttribute("reservations", service.findMine(userId));
+        model.addAttribute("recoveries", recovery.findByUserIdAndStatusIn(userId, java.util.List.of("PENDING", "MANUAL_REVIEW")));
         model.addAttribute("payments", payments.findByUserIdOrderByApprovedAtDesc(userId));
         return "reservations/mine";
     }

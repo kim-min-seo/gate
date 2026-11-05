@@ -16,7 +16,7 @@ class PaymentValidationTest {
         when(values.get("gate:payment:order:order-test")).thenReturn(payload);
         var toss = mock(TossPaymentService.class);
         var reservations = mock(ReservationService.class);
-        var controller = new PaymentController(redis, toss, reservations, mock(PaymentRepository.class));
+        var controller = new PaymentController(redis, toss, reservations, mock(PaymentRepository.class), mock(PaymentRecoveryService.class));
         var session = new MockHttpSession(); session.setAttribute("userId", userId);
         var attributes = new RedirectAttributesModelMap();
         assertEquals("redirect:/slots", controller.success("fake-key", "order-test", amount, session, attributes));

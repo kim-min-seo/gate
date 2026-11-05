@@ -13,9 +13,10 @@ public class PaymentController {
     private final TossPaymentService toss;
     private final ReservationService reservations;
     private final PaymentRepository payments;
+    private final PaymentRecoveryService recovery;
 
-    public PaymentController(StringRedisTemplate redis, TossPaymentService toss, ReservationService reservations, PaymentRepository payments) {
-        this.redis = redis; this.toss = toss; this.reservations = reservations; this.payments = payments;
+    public PaymentController(StringRedisTemplate redis, TossPaymentService toss, ReservationService reservations, PaymentRepository payments, PaymentRecoveryService recovery) {
+        this.redis = redis; this.toss = toss; this.reservations = reservations; this.payments = payments; this.recovery = recovery;
     }
 
     @GetMapping("/payment/success")
@@ -31,10 +32,12 @@ public class PaymentController {
             Long orderUserId = Long.valueOf(parts[2]);
             int expected = seatIds.size() * 10000;
             if (!userId.equals(orderUserId) || amount != expected) throw new IllegalStateException("결제 금액 또는 사용자 정보가 일치하지 않습니다.");
+            recovery.prepare(orderId, paymentKey, userId, slotId, amount, seatIds);
             reservations.recordPaidOrder(slotId, seatIds, userId, paymentKey, orderId, amount);
+            recovery.resolve(orderId);
             redis.delete("gate:payment:order:" + orderId);
             attributes.addFlashAttribute("message", "테스트 결제가 승인되고 예약이 확정되었습니다.");
-        } catch (RuntimeException e) { attributes.addFlashAttribute("message", "결제 승인 실패: " + e.getMessage()); }
+        } catch (RuntimeException e) { attributes.addFlashAttribute("message", "결제 처리가 완료되지 않았습니다. 내 예약에서 확인해 주세요. 확인 중인 결제는 자동으로 재조회됩니다."); }
         return "redirect:/slots";
     }
 

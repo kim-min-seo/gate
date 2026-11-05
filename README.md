@@ -143,3 +143,13 @@ requests=200 success=100 saved=100 elapsedMs=1142 remaining=0
 - Tests: timeout followed by approved query, response amount mismatch, live-key rejection and repeated recorded order without a second gateway call passed.
 - Removed controller-level automatic cancellation on any reservation error: that could cancel a valid payment belonging to a parallel request. Durable reconciliation/compensation jobs are still required for DB commit failures or unavailable payment queries.
 - A replay after the temporary Redis order expires is still rejected by the controller. Durable order state and recovery remain pending.
+
+## 결제 복구 기록과 재처리
+
+- 결제 승인 API 호출 전에 `payment_recovery`에 요청을 별도 트랜잭션으로 저장합니다. 기록 저장이 실패하면 결제 API를 호출하지 않습니다.
+- 최초 1분 후부터 워커가 30초 간격으로 재처리 대상을 조회합니다. 실패 간격은 점진적으로 늘리며 10회 후 `MANUAL_REVIEW`로 남깁니다.
+- `PENDING`: 결제 조회 필요, `RESOLVED`: 로컬 상태 정리 완료, `MANUAL_REVIEW`: 관리자 확인 필요.
+- 토스 조회에서 주문번호·결제키·금액을 검증합니다. 승인 완료이고 좌석 점유가 유효하면 예약을 복구합니다. 좌석이 만료됐다면 전체 취소를 확인한 뒤 취소 기록을 저장합니다.
+- 정상 로컬 결제 기록이 존재하는 주문에는 보상 취소를 호출하지 않습니다. 사용자에게는 내 예약에서 확인 중/관리자 확인 안내를 표시합니다.
+- 테스트: 복구 분기 6개, 예약 트랜잭션 롤백 후 복구 기록 보존(PostgreSQL 통합 테스트), 기존 전체 테스트 통과. 서버 재시작 후 회원가입·내 예약 HTTP 200 확인.
+- 한계: 자동 복구는 이번 변경 이후 기록된 결제 승인 시도 대상입니다. 과거 결제와 사용자 요청에 의한 취소 API의 불확실한 결과 복구는 별도 보강이 필요합니다. DB 자체 장애 중에는 재처리도 DB 복구를 기다립니다. 관리자 수동 재처리 화면은 아직 없습니다.
