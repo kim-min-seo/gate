@@ -163,3 +163,17 @@ requests=200 success=100 saved=100 elapsedMs=1142 remaining=0
 - 실행 서버 HTTP 검증: `pwsh -File scripts/verify-local.ps1`. 서버와 Docker DB/Redis가 실행 중이어야 합니다. 테스트용 계정과 취소된 예약이 생성되며 실제 PG 승인 API는 호출하지 않습니다.
 - 검증된 흐름: 회원가입/CSRF → 날짜/100석 화면 → 자동 2석 배정 → 수동 2석 선택 → 결제 페이지 렌더링 → 두 주문 전체 취소 → 좌석 반환 → 로그아웃/재로그인.
 - 브라우저 UI 제어는 현재 연결 제한으로 완료하지 못했습니다. 토스 SDK 렌더링/인증을 포함한 최신 브라우저 전체 흐름은 별도 수동 확인이 필요합니다.
+
+## PostgreSQL 백업과 복원 점검
+
+PowerShell에서 개발 DB 백업:
+
+```powershell
+$backup = .\scripts\backup-db.ps1
+.\scripts\verify-backup.ps1 -BackupPath $backup
+```
+
+- 백업은 `backups/`에 custom-format archive와 SHA-256 메타데이터로 저장됩니다. 사용자 정보와 결제 기록이 포함되므로 Git에 올리지 않습니다.
+- 검증 스크립트는 포트나 기존 볼륨을 연결하지 않은 임시 PostgreSQL 17 컨테이너에만 복원합니다. 복원 후 주요 6개 테이블을 조회하고 해당 임시 컨테이너를 종료합니다.
+- 2026-11-05: 실제 개발 DB archive 생성, 체크섬 확인, 별도 DB 복원과 테이블 조회 통과. 준비 상태 검사는 초기화용 임시 서버가 아닌 최종 TCP 서버를 대상으로 합니다.
+- 클라우드에서는 정기 백업·외부 보관·보관 기간 설정이 추가로 필요합니다. 로컬 백업 성공이 클라우드 백업 운영 완료를 의미하지는 않습니다.
