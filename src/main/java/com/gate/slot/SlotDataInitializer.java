@@ -3,40 +3,26 @@ package com.gate.slot;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import java.time.LocalDateTime;
-import com.gate.seat.Seat;
-import com.gate.seat.SeatRepository;
+import org.springframework.scheduling.annotation.Scheduled;
+import java.time.*;
+import java.util.*;
 
 @Configuration
 public class SlotDataInitializer {
-    @Bean
-    CommandLineRunner seedSlots(SlotRepository repository, SeatRepository seatRepository) {
-        return args -> {
-            if (repository.count() == 0) {
-                for (Slot slot : java.util.List.of(
-                        repository.save(new Slot("10시 입장", 100, LocalDateTime.of(2026, 9, 20, 10, 0))),
-                        repository.save(new Slot("14시 입장", 100, LocalDateTime.of(2026, 9, 20, 14, 0))),
-                        repository.save(new Slot("18시 입장", 100, LocalDateTime.of(2026, 9, 20, 18, 0))))) {
-                    for (int row = 1; row <= 10; row++) for (char col = 'A'; col <= 'J'; col++)
-                        seatRepository.save(new Seat(row + "-" + col, slot));
-                }
+    private final SlotRepository slots;
+    public SlotDataInitializer(SlotRepository slots){this.slots=slots;}
+    @Bean CommandLineRunner seedSlots(){return args -> maintainSlots();}
+    @Scheduled(cron="0 0 0 * * *",zone="Asia/Seoul")
+    public void maintainSlots(){
+        var today=LocalDate.now(ZoneId.of("Asia/Seoul"));
+        var existing=new HashSet<>(slots.findAll().stream().map(Slot::getStartsAt).toList());
+        var missing=new ArrayList<Slot>();
+        for(var date=today;date.isBefore(today.plusMonths(6));date=date.plusDays(1)){
+            for(int hour=9;hour<=18;hour++){
+                var starts=date.atTime(hour,0);
+                if(!existing.contains(starts)) missing.add(new Slot(hour+"시 입장",100,starts));
             }
-            for (Slot slot : repository.findAll()) {
-                if (seatRepository.countBySlot(slot) >= 100) continue;
-                for (int row = 1; row <= 10; row++) for (char col = 'A'; col <= 'J'; col++) {
-                    String label = row + "-" + col;
-                    if (!seatRepository.existsBySlotAndLabel(slot, label)) seatRepository.save(new Seat(label, slot));
-                }
-            }
-            LocalDateTime base = LocalDateTime.now().withHour(9).withMinute(0).withSecond(0).withNano(0);
-            int[] hours = {9,10,11,12,13,14,15,16,17,18};
-            for (int day = 0; day < 30; day++) for (int hour : hours) {
-                LocalDateTime starts = base.plusDays(day).withHour(hour);
-                if (!repository.existsByStartsAt(starts)) {
-                    Slot slot = repository.save(new Slot(hour + "시 입장", 100, starts));
-                    for (int row = 1; row <= 10; row++) for (char col = 'A'; col <= 'J'; col++) seatRepository.save(new Seat(row + "-" + col, slot));
-                }
-            }
-        };
+        }
+        slots.saveAll(missing);
     }
 }

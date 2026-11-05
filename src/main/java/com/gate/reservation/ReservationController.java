@@ -2,6 +2,7 @@ package com.gate.reservation;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -16,13 +17,23 @@ public class ReservationController {
 
     public ReservationController(ReservationService service, StringRedisTemplate redis) { this.service = service; this.redis = redis; }
 
+    @GetMapping("/payment")
+    public String paymentEntry(RedirectAttributes attributes) {
+        attributes.addFlashAttribute("message", "시간대와 좌석을 선택한 뒤 결제를 진행해 주세요.");
+        return "redirect:/slots";
+    }
+
     @PostMapping("/payment")
-    public String payment(@RequestParam Long slotId, @RequestParam java.util.List<Long> seatIds, jakarta.servlet.http.HttpSession session, org.springframework.ui.Model model) {
+    public String payment(@RequestParam(required=false) Long slotId, @RequestParam(required=false) java.util.List<Long> seatIds, jakarta.servlet.http.HttpSession session, org.springframework.ui.Model model, RedirectAttributes attributes) {
         Long userId = (Long) session.getAttribute("userId"); if (userId == null) return "redirect:/login";
-        if (seatIds.size() < 1 || seatIds.size() > 4) return "redirect:/slots/" + slotId + "/seats";
+        if (slotId == null) { attributes.addFlashAttribute("message", "날짜와 시간대를 먼저 선택해 주세요."); return "redirect:/slots"; }
+        if (seatIds == null || seatIds.isEmpty() || seatIds.size() > 4) {
+            attributes.addFlashAttribute("message", "좌석을 1~4개 선택한 뒤 예매해 주세요.");
+            return "redirect:/slots/" + slotId + "/seats";
+        }
         String orderId = "GATE-" + UUID.randomUUID();
         try { service.holdOrder(slotId, seatIds, userId, orderId); }
-        catch (IllegalStateException failure) { model.addAttribute("message", failure.getMessage()); return "redirect:/slots/" + slotId + "/seats"; }
+        catch (IllegalStateException failure) { attributes.addFlashAttribute("message", failure.getMessage()); return "redirect:/slots/" + slotId + "/seats"; }
         if (session.getAttribute("paymentCustomerKey") == null) session.setAttribute("paymentCustomerKey", UUID.randomUUID().toString());
         model.addAttribute("customerKey", session.getAttribute("paymentCustomerKey"));
         String payload = slotId + "|" + String.join(",", seatIds.stream().map(String::valueOf).toList()) + "|" + userId;
@@ -38,7 +49,7 @@ public class ReservationController {
         if (userId == null) return "redirect:/login";
         try {
             var ids = service.selectAvailableSeats(slotId, count);
-            return payment(slotId, ids, session, model);
+            return payment(slotId, ids, session, model, attributes);
         }
         catch (IllegalStateException e) { attributes.addFlashAttribute("message", e.getMessage()); }
         return "redirect:/slots";

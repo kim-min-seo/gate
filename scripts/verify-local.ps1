@@ -1,4 +1,4 @@
-param([string]$BaseUrl='http://localhost:8080')
+param([string]$BaseUrl='http://localhost:8080', [string]$ReservationDate=(Get-Date).AddDays(1).ToString('yyyy-MM-dd'))
 $ErrorActionPreference='Stop'
 function Assert-Gate($Condition,[string]$Message){if(!$Condition){throw $Message}}
 function Get-Csrf([string]$Html){
@@ -13,7 +13,7 @@ $token=Get-Csrf $signup.Content
 $result=Invoke-WebRequest "$BaseUrl/signup" -Method Post -WebSession $session -ContentType 'application/x-www-form-urlencoded' -Body "email=$email&password=$password&_csrf=$token"
 Assert-Gate ($result.StatusCode -eq 200) 'Signup failed'
 Write-Output 'PASS signup with CSRF'
-$date=(Get-Date).AddDays(1).ToString('yyyy-MM-dd')
+$date=$ReservationDate
 $slots=Invoke-WebRequest "$BaseUrl/slots?date=$date" -WebSession $session
 $seatPath=[regex]::Match($slots.Content,'href="(/slots/(\d+)/seats)"')
 Assert-Gate $seatPath.Success 'No future slots'
@@ -22,6 +22,13 @@ $path=$seatPath.Groups[1].Value
 $page=Invoke-WebRequest "$BaseUrl$path" -WebSession $session
 Assert-Gate (([regex]::Matches($page.Content,'name="seatIds"')).Count -eq 100) 'Expected 100 seats'
 Write-Output 'PASS date and 100-seat page'
+$token=Get-Csrf $page.Content
+$emptySelection=Invoke-WebRequest "$BaseUrl/payment" -Method Post -WebSession $session -ContentType 'application/x-www-form-urlencoded' -Body "slotId=$slotId&_csrf=$token"
+Assert-Gate ($emptySelection.StatusCode -eq 200 -and $emptySelection.Content -match 'SELECT YOUR SEAT') 'Empty selection must return to seat selection, not HTTP 400'
+Write-Output 'PASS empty selection redirects to seat page'
+$directPayment=Invoke-WebRequest "$BaseUrl/payment" -WebSession $session
+Assert-Gate ($directPayment.StatusCode -eq 200 -and $directPayment.Content -match 'CHOOSE YOUR MOMENT') 'Direct checkout URL must return to slots'
+Write-Output 'PASS direct checkout URL redirects to slots'
 $token=Get-Csrf $page.Content
 $auto=Invoke-WebRequest "$BaseUrl/reservations/auto" -Method Post -WebSession $session -ContentType 'application/x-www-form-urlencoded' -Body "slotId=$slotId&count=2&_csrf=$token"
 Assert-Gate ($auto.Content -match 'id="pay-button"') 'Automatic assignment did not reach checkout'

@@ -18,10 +18,17 @@ public class SlotController {
 
     @GetMapping
     public String list(@RequestParam(required=false) String date, Model model) {
-        var all = slotService.findAll();
-        LocalDate selected = date == null ? (all.isEmpty() ? LocalDate.now() : all.get(0).getStartsAt().toLocalDate()) : LocalDate.parse(date);
-        model.addAttribute("slots", all.stream().filter(s -> s.getStartsAt().toLocalDate().equals(selected)).toList());
-        model.addAttribute("dates", all.stream().map(s -> s.getStartsAt().toLocalDate()).distinct().sorted().toList());
+        var now = java.time.LocalDateTime.now();
+        var all = slotService.findAll().stream().filter(s -> s.getStartsAt().isAfter(now) && s.getStartsAt().toLocalDate().isBefore(LocalDate.now().plusMonths(6))).toList();
+        var dates = all.stream().map(s -> s.getStartsAt().toLocalDate()).distinct().sorted().toList();
+        LocalDate selected = dates.isEmpty() ? LocalDate.now() : dates.getFirst();
+        if (date != null) {
+            try { var requested = LocalDate.parse(date); if (dates.contains(requested)) selected = requested; }
+            catch (java.time.format.DateTimeParseException ignored) { model.addAttribute("message", "올바른 예약 날짜를 선택해 주세요."); }
+        }
+        final LocalDate selectedDate = selected;
+        model.addAttribute("slots", all.stream().filter(s -> s.getStartsAt().toLocalDate().equals(selectedDate)).toList());
+        model.addAttribute("dates", dates);
         model.addAttribute("selectedDate", selected);
         return "slots/list";
     }

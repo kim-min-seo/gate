@@ -3,6 +3,8 @@ services:
     build: .
     restart: unless-stopped
     environment:
+      TZ: Asia/Seoul
+      JAVA_TOOL_OPTIONS: -Duser.timezone=Asia/Seoul
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/gate
       SPRING_DATASOURCE_USERNAME: gate
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}

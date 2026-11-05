@@ -97,9 +97,24 @@ public class ReservationService {
         }
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
+    public void ensureSeatInventory(Long slotId) {
+        var slot=slots.findByIdForUpdate(slotId).orElseThrow();
+        var existing=seats.findAllBySlotOrderByLabelAsc(slot);
+        if(existing.size()>=100) return;
+        var labels=new java.util.HashSet<>(existing.stream().map(Seat::getLabel).toList());
+        var missing=new java.util.ArrayList<Seat>();
+        for(int row=1;row<=10;row++) for(char column='A';column<='J';column++){
+            var label=row+"-"+column;
+            if(!labels.contains(label)) missing.add(new Seat(label,slot));
+        }
+        seats.saveAll(missing);
+    }
+
+    @Transactional
     public java.util.List<Long> selectAvailableSeats(Long slotId, int count) {
         if (count < 1 || count > 4) throw new IllegalStateException("1~4매를 선택하세요.");
+        ensureSeatInventory(slotId);
         var available = new java.util.ArrayList<>(seats.findAllBySlotOrderByLabelAsc(getSlot(slotId))
                 .stream().filter(seat -> !seat.isReserved()).toList());
         java.util.Collections.shuffle(available);
