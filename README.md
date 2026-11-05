@@ -206,3 +206,5 @@ $backup = .\scripts\backup-db.ps1
 - 자동 테스트: 기본 만료 1800초, 마지막 접근 29분 전 유지/31분 전 만료, 새 접근 후 기준 갱신 통과. 31분 실시간 대기 대신 저장 시각을 조정한 검증입니다.
 - 실제 앱 재시작 전후에 동일 쿠키로 인증 요청이 유지됨을 확인했습니다. 재현: `scripts/verify-session-restart.ps1 -Phase BeforeRestart` → 앱 재시작 → `-Phase AfterRestart`.
 - 세션 저장 방식 변경 직후에는 기존 메모리 세션에서 새 Redis 세션으로 자동 이전되지 않으므로 한 번 다시 로그인해야 합니다.
+
+최근 실제 사용 시나리오와 동시 요청 점검 결과는 [검증 기록](docs/validation/2026-11-05.md)에 정리했습니다. 현재 DB 무결성은 `scripts/audit-reservations.sql`로 반복 조회할 수 있습니다.

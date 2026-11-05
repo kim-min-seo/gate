@@ -76,6 +76,8 @@ public class ReservationService {
             if (existing.getStatus() != PaymentStatus.APPROVED) throw new IllegalStateException("이미 취소된 주문입니다.");
             return;
         }
+        var recovery=recoveryJobs.findById(orderId).orElse(null);
+        if(recovery!=null && recovery.isCancellationRequested()) throw new IllegalStateException("취소 요청된 주문입니다.");
         var booked = reservations.findByOrderIdAndUserId(orderId, userId);
         if (booked.size() != seatIds.size() || booked.stream().anyMatch(r -> r.getStatus() != ReservationStatus.HELD || r.isExpired()))
             throw new IllegalStateException("좌석 점유가 만료되었습니다.");
