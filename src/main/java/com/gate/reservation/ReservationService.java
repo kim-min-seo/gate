@@ -17,10 +17,11 @@ public class ReservationService {
     private final StringRedisTemplate redis;
     private final PaymentRepository payments;
     private final TossPaymentService toss;
+    private final PaymentRecoveryRepository recoveryJobs;
     @jakarta.persistence.PersistenceContext private jakarta.persistence.EntityManager entityManager;
 
-    public ReservationService(ReservationRepository reservations, SlotRepository slots, SeatRepository seats, StringRedisTemplate redis, PaymentRepository payments, TossPaymentService toss) {
-        this.reservations = reservations; this.slots = slots; this.seats = seats; this.redis = redis; this.payments = payments; this.toss = toss;
+    public ReservationService(ReservationRepository reservations, SlotRepository slots, SeatRepository seats, StringRedisTemplate redis, PaymentRepository payments, TossPaymentService toss, PaymentRecoveryRepository recoveryJobs) {
+        this.reservations = reservations; this.slots = slots; this.seats = seats; this.redis = redis; this.payments = payments; this.toss = toss; this.recoveryJobs = recoveryJobs;
     }
     public Slot getSlot(Long id) { return slots.findById(id).orElseThrow(); }
     public Boolean claimIdempotency(Long userId, String key) { return redis.opsForValue().setIfAbsent("gate:idempotency:" + userId + ":" + key, "done", Duration.ofMinutes(10)); }
@@ -84,6 +85,26 @@ public class ReservationService {
     }
 
     @Transactional
+    public java.util.List<Long> beginCheckout(Long slotId, java.util.List<Long> selected, Long userId, String orderId, int autoCount) {
+        var slot=slots.findByIdForUpdate(slotId).orElseThrow();
+        if(!slot.getStartsAt().isAfter(java.time.LocalDateTime.now())) throw new IllegalStateException("지난 시간대입니다.");
+        var previous=reservations.findByUserIdAndSlotIdAndStatusIn(userId,slotId,java.util.List.of(ReservationStatus.HELD));
+        for(var item:previous){
+            if(entityManager!=null) entityManager.refresh(item);
+            if(item.getStatus()!=ReservationStatus.HELD) continue;
+            if(item.getOrderId()!=null && (recoveryJobs.existsById(item.getOrderId()) || payments.findByOrderId(item.getOrderId()).isPresent()))
+                throw new IllegalStateException("이전 결제 결과를 확인 중입니다. 내 예약에서 상태를 확인해 주세요.");
+        }
+        for(var item:previous) if(item.getStatus()==ReservationStatus.HELD){
+            item.cancel();if(item.getSeat()!=null)item.getSeat().release();slot.increaseRemaining();
+        }
+        // Release and replacement share one transaction: if replacement fails, keep the previous hold.
+        var ids=selected==null ? selectAvailableSeats(slotId,autoCount) : selected;
+        holdOrder(slotId,ids,userId,orderId);
+        return ids;
+    }
+
+    @Transactional
     public void holdOrder(Long slotId, java.util.List<Long> seatIds, Long userId, String orderId) {
         if (seatIds.isEmpty() || seatIds.size() > 4 || new java.util.HashSet<>(seatIds).size() != seatIds.size())
             throw new IllegalStateException("서로 다른 좌석을 1~4개 선택하세요.");
@@ -95,6 +116,14 @@ public class ReservationService {
             var item = reserve(slotId, userId);
             seat.reserve(); item.assignSeat(seat); item.setOrderId(orderId);
         }
+    }
+
+    @Transactional(readOnly=true)
+    public java.util.List<Long> selectableHeldSeatIds(Long slotId,Long userId){
+        if(userId==null)return java.util.List.of();
+        return reservations.findByUserIdAndSlotIdAndStatusIn(userId,slotId,java.util.List.of(ReservationStatus.HELD)).stream()
+                .filter(item -> item.getOrderId()!=null && !recoveryJobs.existsById(item.getOrderId()) && payments.findByOrderId(item.getOrderId()).isEmpty())
+                .filter(item -> item.getSeat()!=null).map(item -> item.getSeat().getId()).toList();
     }
 
     @Transactional

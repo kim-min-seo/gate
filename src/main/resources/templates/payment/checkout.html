@@ -24,11 +24,22 @@ button.addEventListener('click', async () => {
     button.disabled = true;
     button.textContent = '결제창 여는 중...';
     const paymentWindow = await widgets.renderPaymentWindow({orderName: 'Gate 예약'});
-    paymentWindow.on('paymentRequest', () => widgets.requestPayment({
+    paymentWindow.on('cancel', async () => {
+      try { await paymentWindow.destroy(); } finally {
+        button.disabled=false;button.textContent='테스트 결제창 열기';
+      }
+    });
+    paymentWindow.on('paymentRequest', async () => {
+      try { await widgets.requestPayment({
       orderId, orderName: 'Gate 예약',
       successUrl: location.origin + '/payment/success',
       failUrl: location.origin + '/payment/fail'
-    }));
+      }); } catch(error) {
+        errorBox.textContent='결제 요청을 진행하지 못했습니다: '+(error.message||error);
+        errorBox.style.display='block';
+        await paymentWindow.destroy();button.disabled=false;button.textContent='테스트 결제창 열기';
+      }
+    });
   } catch (error) {
     button.disabled = false;
     button.textContent = '테스트 결제창 열기';

@@ -15,7 +15,7 @@ class PaymentReplayTest {
         var slots = mock(SlotRepository.class);
         var payments = mock(PaymentRepository.class);
         var gateway = mock(TossPaymentService.class);
-        var service = new ReservationService(repo, slots, mock(SeatRepository.class), mock(StringRedisTemplate.class), payments, gateway);
+        var service = new ReservationService(repo, slots, mock(SeatRepository.class), mock(StringRedisTemplate.class), payments, gateway, mock(PaymentRecoveryRepository.class));
         when(slots.findByIdForUpdate(1L)).thenReturn(Optional.of(new Slot("future",100,LocalDateTime.now().plusDays(1))));
         when(payments.findByOrderId("order-a")).thenReturn(Optional.of(new Payment("key-a","order-a",10000,1L,1L)));
         service.recordPaidOrder(1L,List.of(1L),1L,"key-a","order-a",10000);

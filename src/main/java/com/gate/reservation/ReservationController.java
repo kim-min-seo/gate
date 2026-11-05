@@ -32,8 +32,13 @@ public class ReservationController {
             return "redirect:/slots/" + slotId + "/seats";
         }
         String orderId = "GATE-" + UUID.randomUUID();
-        try { service.holdOrder(slotId, seatIds, userId, orderId); }
+        try { service.beginCheckout(slotId, seatIds, userId, orderId, 0); }
         catch (IllegalStateException failure) { attributes.addFlashAttribute("message", failure.getMessage()); return "redirect:/slots/" + slotId + "/seats"; }
+        return checkoutView(slotId, seatIds, userId, orderId, session, model);
+    }
+
+    private String checkoutView(Long slotId, java.util.List<Long> seatIds, Long userId, String orderId,
+                                jakarta.servlet.http.HttpSession session, org.springframework.ui.Model model) {
         if (session.getAttribute("paymentCustomerKey") == null) session.setAttribute("paymentCustomerKey", UUID.randomUUID().toString());
         model.addAttribute("customerKey", session.getAttribute("paymentCustomerKey"));
         String payload = slotId + "|" + String.join(",", seatIds.stream().map(String::valueOf).toList()) + "|" + userId;
@@ -48,8 +53,9 @@ public class ReservationController {
         Long userId = (Long) session.getAttribute("userId");
         if (userId == null) return "redirect:/login";
         try {
-            var ids = service.selectAvailableSeats(slotId, count);
-            return payment(slotId, ids, session, model, attributes);
+            String orderId="GATE-" + UUID.randomUUID();
+            var ids = service.beginCheckout(slotId, null, userId, orderId, count);
+            return checkoutView(slotId, ids, userId, orderId, session, model);
         }
         catch (IllegalStateException e) { attributes.addFlashAttribute("message", e.getMessage()); }
         return "redirect:/slots";

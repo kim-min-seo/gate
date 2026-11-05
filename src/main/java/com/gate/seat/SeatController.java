@@ -14,10 +14,11 @@ public class SeatController {
     private final com.gate.reservation.ReservationService reservations;
     public SeatController(SlotRepository slots, SeatRepository seats, com.gate.reservation.ReservationService reservations) { this.slots = slots; this.seats = seats;this.reservations=reservations; }
     @GetMapping("/slots/{slotId}/seats")
-    public String seats(@PathVariable Long slotId, Model model) {
+    public String seats(@PathVariable Long slotId, Model model, jakarta.servlet.http.HttpSession session) {
         var slot = slots.findById(slotId).orElseThrow();
         if(!slot.getStartsAt().isAfter(java.time.LocalDateTime.now())) return "redirect:/slots";
         reservations.ensureSeatInventory(slotId);
+        model.addAttribute("selectableHeldSeatIds",reservations.selectableHeldSeatIds(slotId,(Long)session.getAttribute("userId")));
         model.addAttribute("slot", slot); model.addAttribute("seats", seats.findAllBySlotOrderByLabelAsc(slot));
         return "seats/list";
     }

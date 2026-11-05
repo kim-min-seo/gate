@@ -15,7 +15,7 @@ class OrderCancellationTest {
         var slots = mock(SlotRepository.class);
         var payments = mock(PaymentRepository.class);
         var toss = mock(TossPaymentService.class);
-        var service = new ReservationService(repo, slots, mock(SeatRepository.class), mock(StringRedisTemplate.class), payments, toss);
+        var service = new ReservationService(repo, slots, mock(SeatRepository.class), mock(StringRedisTemplate.class), payments, toss, mock(PaymentRecoveryRepository.class));
         var slot = new Slot("future", 100, LocalDateTime.now().plusDays(1));
         var first = new Reservation(1L, slot); first.setOrderId("order-a"); first.confirm();
         var second = new Reservation(1L, slot); second.setOrderId("order-a"); second.confirm();
