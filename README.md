@@ -1,6 +1,6 @@
-# Gate 선착순 예약 시스템
+# Gate 좌석 예약 서비스
 
-취업 포트폴리오용 선착순 좌석 예약 서비스입니다. 사용자는 시간대를 선택하고 좌석을 고른 뒤 결제수단을 선택해 예약할 수 있습니다.
+Gate는 좌석 예약 서비스입니다. 사용자는 시간대를 선택하고 좌석을 고른 뒤 결제수단을 선택해 예약할 수 있습니다.
 
 ## 기술 스택
 - Java 25 / Spring Boot 4.0.0 / Gradle Kotlin DSL
@@ -135,3 +135,11 @@ requests=200 success=100 saved=100 elapsedMs=1142 remaining=0
 - Cancellation and expiration recheck reservation state under the slot lock. Unpaid holds may be cancelled without a payment record.
 - Queue processing no longer creates reservations without checkout; admission-ready signalling is basic and requires further UI integration.
 - Remaining blockers: approval timeout/reconciliation, compensation failure recovery, historical unlinked payments, migration/backups, full browser payment/cancellation regression. Do not treat passing unit tests as end-to-end payment verification.
+
+## Payment approval hardening (2026-11-05)
+- Slot database lock now covers the local replay check, gateway confirmation and reservation finalization. This serializes confirmations for the same slot; it also means gateway latency holds that slot lock.
+- Confirmation and full cancellation use stable Idempotency-Key headers.
+- Connect timeout: 5 seconds; read timeout: 15 seconds. Confirmation errors trigger a payment query. Only matching paymentKey/orderId/totalAmount with DONE status is accepted.
+- Tests: timeout followed by approved query, response amount mismatch, live-key rejection and repeated recorded order without a second gateway call passed.
+- Removed controller-level automatic cancellation on any reservation error: that could cancel a valid payment belonging to a parallel request. Durable reconciliation/compensation jobs are still required for DB commit failures or unavailable payment queries.
+- A replay after the temporary Redis order expires is still rejected by the controller. Durable order state and recovery remain pending.

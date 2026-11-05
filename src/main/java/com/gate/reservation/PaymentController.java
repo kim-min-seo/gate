@@ -31,14 +31,7 @@ public class PaymentController {
             Long orderUserId = Long.valueOf(parts[2]);
             int expected = seatIds.size() * 10000;
             if (!userId.equals(orderUserId) || amount != expected) throw new IllegalStateException("결제 금액 또는 사용자 정보가 일치하지 않습니다.");
-            if (payments.existsByPaymentKey(paymentKey)) throw new IllegalStateException("이미 승인된 결제입니다.");
-            toss.confirm(paymentKey, orderId, amount);
-            try {
-                reservations.recordPaidOrder(slotId, seatIds, userId, paymentKey, orderId, amount);
-            } catch (RuntimeException failure) {
-                toss.cancel(paymentKey, "Reservation finalization failed");
-                throw failure;
-            }
+            reservations.recordPaidOrder(slotId, seatIds, userId, paymentKey, orderId, amount);
             redis.delete("gate:payment:order:" + orderId);
             attributes.addFlashAttribute("message", "테스트 결제가 승인되고 예약이 확정되었습니다.");
         } catch (RuntimeException e) { attributes.addFlashAttribute("message", "결제 승인 실패: " + e.getMessage()); }

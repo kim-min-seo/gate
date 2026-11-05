@@ -68,9 +68,17 @@ public class ReservationService {
     public void recordPaidOrder(Long slotId, java.util.List<Long> seatIds, Long userId,
                                 String paymentKey, String orderId, int amount) {
         slots.findByIdForUpdate(slotId).orElseThrow();
+        var existing = payments.findByOrderId(orderId).orElse(null);
+        if (existing != null) {
+            if (!existing.getUserId().equals(userId) || existing.getAmount() != amount || !existing.getPaymentKey().equals(paymentKey))
+                throw new IllegalStateException("결제 주문 정보가 일치하지 않습니다.");
+            if (existing.getStatus() != PaymentStatus.APPROVED) throw new IllegalStateException("이미 취소된 주문입니다.");
+            return;
+        }
         var booked = reservations.findByOrderIdAndUserId(orderId, userId);
         if (booked.size() != seatIds.size() || booked.stream().anyMatch(r -> r.getStatus() != ReservationStatus.HELD || r.isExpired()))
             throw new IllegalStateException("좌석 점유가 만료되었습니다.");
+        toss.confirm(paymentKey, orderId, amount);
         booked.forEach(Reservation::confirm);
         payments.save(new Payment(paymentKey, orderId, amount, userId, slotId));
     }
