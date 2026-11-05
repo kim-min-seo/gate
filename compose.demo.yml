@@ -1,0 +1,55 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/gate
+      SPRING_DATASOURCE_USERNAME: gate
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+      SPRING_DATA_REDIS_HOST: redis
+      TOSS_CLIENT_KEY: ${TOSS_CLIENT_KEY:?Set test client key}
+      TOSS_SECRET_KEY: ${TOSS_SECRET_KEY:?Set test secret key}
+      SPRING_JPA_SHOW_SQL: 'false'
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health
+      SERVER_FORWARD_HEADERS_STRATEGY: framework
+      SERVER_SERVLET_SESSION_COOKIE_SECURE: 'true'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+  proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports: ['80:80', '443:443']
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:?Set domain}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+    depends_on: [app]
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: gate
+      POSTGRES_USER: gate
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+    volumes: [postgres-data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U gate -d gate']
+      interval: 5s
+      retries: 20
+  redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes']
+    volumes: [redis-data:/data]
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      retries: 20
+volumes:
+  postgres-data:
+  redis-data:
+  caddy-data:

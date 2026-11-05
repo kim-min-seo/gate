@@ -10,6 +10,9 @@ public class Reservation {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private Long userId;
+    private String orderId;
+    public String getOrderId() { return orderId; }
+    public void setOrderId(String orderId) { this.orderId = orderId; }
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     private Slot slot;
     @ManyToOne(fetch = FetchType.LAZY)

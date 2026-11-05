@@ -115,3 +115,15 @@ requests=200 success=100 saved=100 elapsedMs=1142 remaining=0
 운영 전 주의:
 - 현재 결제는 토스 테스트 모드이며 실제 금액은 청구되지 않는다.
 - 실제 운영 결제 전에는 부분 취소를 지원하지 않는 정책을 화면과 환불 안내에 명시해야 한다.
+
+## 2026-11-05 deployment preparation
+
+- Reservations now carry orderId. Cancellation targets that exact order, not every purchase for the same time slot.
+- Checkout holds selected seats for ten minutes. Approval confirms the held rows.
+- If reservation finalization fails after payment approval, a compensating test payment cancellation is attempted.
+- Dockerfile and compose.demo.yml prepare one-server hosting with Caddy HTTPS; database/cache ports are internal.
+- Environment files are excluded from Git. Copy .env.demo.example to .env.demo on the server and supply test keys privately.
+- Deployment command: docker compose --env-file .env.demo -f compose.demo.yml up -d --build
+- SITE_ADDRESS must resolve to the server. Allow inbound TCP 80/443; restrict SSH to the operator.
+- Pending: payment timeout/reconciliation tests, historical payment-to-reservation linkage, CSRF protection, database migrations, backup/restore verification, container build and browser end-to-end verification.
+- Public deployment is not complete. A cloud account, server, address and budget choice remain required.

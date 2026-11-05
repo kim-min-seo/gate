@@ -43,6 +43,7 @@ public class ReservationController {
         Long userId = (Long) session.getAttribute("userId"); if (userId == null) return "redirect:/login";
         if (seatIds.size() < 1 || seatIds.size() > 4) return "redirect:/slots/" + slotId + "/seats";
         String orderId = "GATE-" + UUID.randomUUID();
+        service.holdOrder(slotId, seatIds, userId, orderId);
         String payload = slotId + "|" + String.join(",", seatIds.stream().map(String::valueOf).toList()) + "|" + userId;
         redis.opsForValue().set("gate:payment:order:" + orderId, payload, Duration.ofMinutes(10));
         model.addAttribute("slot", service.getSlot(slotId)); model.addAttribute("seatIds", seatIds);
